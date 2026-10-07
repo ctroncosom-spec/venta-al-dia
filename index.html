@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -74,17 +73,19 @@ function calc(y,m){
   const gz=fill($('gz'),'Todas las zonas',[...new Set(mr.map(r=>r.z))].sort());
   const gd=fill($('gd'),'Todos los distribuidores',[...new Set(mr.filter(r=>!gz||r.z===gz).map(r=>r.s))].sort());
   const fr=mr.filter(r=>(!gz||r.z===gz)&&(!gd||r.s===gd)),cur=fr.filter(r=>r.y===y),aa=fr.filter(r=>r.y===y-1);
+  const yr=rows.filter(r=>(r.y===y||r.y===y-1)&&(!gz||r.z===gz)&&(!gd||r.s===gd));
   const PR=(proy[y+'-'+m]||[]).filter(e=>(!gz||e.z===gz)&&(!gd||e.s===gd));
   const ixA={},ixC={},ixr=(L,I)=>L.forEach(r=>{const k=r.z+'\u0001'+r.s;(I[k]=I[k]||[]).push(r)});ixr(aa,ixA);ixr(cur,ixC);
   const split=(e,kf)=>{const k0=e.z+'\u0001'+e.s;
     for(const I of [ixA,ixC]){const W={};let T=0;(I[k0]||[]).forEach(r=>{if(r.k>0){const k=kf(r);W[k]=(W[k]||0)+r.k;T+=r.k}});if(T>0)return Object.entries(W).map(([k,v])=>[k,e.p*v/T])}
     return [['Sin historial',e.p]]};
   const group=(kf,pk)=>{
-    const M={},mk=(k,z)=>M[k]=M[k]||{n:String(k),z,c:0,a:0,f:0,p:0},up=(r,t)=>{mk(kf(r),r.z)[t]+=r.k};
+    const M={},mk=(k,z)=>M[k]=M[k]||{n:String(k),z,c:0,a:0,f:0,p:0,yc:0,ya:0,yf:0},up=(r,t)=>{mk(kf(r),r.z)[t]+=r.k};
     cur.forEach(r=>up(r,'c'));
     aa.forEach(r=>{up(r,'f');if(r.d<=cut)up(r,'a')});
     if(pk)PR.forEach(e=>pk(e).forEach(([k,v])=>{mk(k,e.z).p+=v}));
-    return Object.values(M).sort((p,q)=>q.c-p.c||q.p-p.p);
+    yr.forEach(r=>{const o=mk(kf(r),r.z);if(r.y===y){if(r.m<=m)o.yc+=r.k}else{o.yf+=r.k;if(r.m<m||(r.m===m&&r.d<=cut))o.ya+=r.k}});
+    return Object.values(M).sort((p,q)=>q.c-p.c||q.p-p.p||q.yc-p.yc);
   };
   const dc=Array(dim).fill(0),da=Array(dim).fill(0);
   cur.forEach(r=>dc[r.d-1]+=r.k);aa.forEach(r=>da[r.d-1]+=r.k);
@@ -104,7 +105,7 @@ function calc(y,m){
   $('zsel').innerHTML='<option value="">Todas las zonas</option>'+res.Zonas.map(r=>`<option>${r.n}</option>`).join('');
   $('zsel').value=zv;
 }
-const tot=a=>a.reduce((o,r)=>({c:o.c+r.c,a:o.a+r.a,f:o.f+r.f,p:o.p+(r.p||0)}),{c:0,a:0,f:0,p:0});
+const tot=a=>a.reduce((o,r)=>({c:o.c+r.c,a:o.a+r.a,f:o.f+r.f,p:o.p+(r.p||0),yc:o.yc+(r.yc||0),ya:o.ya+(r.ya||0),yf:o.yf+(r.yf||0)}),{c:0,a:0,f:0,p:0,yc:0,ya:0,yf:0});
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 function trend(P){
@@ -130,7 +131,10 @@ function draw(){
     ['Cumplimiento vs cierre '+(y-1),`${pc(T.f?T.c/T.f:NaN)}`],
     ['Cierre estimado (ritmo '+(y-1)+')',n0(proj)],['Cierre '+(y-1),n0(T.f)],
     ['Proyección del mes',T.p?n0(T.p):'–'],['Avance vs proyección',T.p?pc(T.c/T.p):'–'],
-    ['Faltan para la proyección',T.p?n0(Math.max(T.p-T.c,0)):'–'],['Kg/semana necesarios (sin domingos)',(()=>{const n=Array.from({length:Math.max(dim-cut,0)},(_,i)=>new Date(y,m,cut+1+i).getDay()).filter(w=>w!==0).length;return T.p&&n>0?n0(Math.max(T.p-T.c,0)/n*6):'–'})()]
+    ['Faltan para la proyección',T.p?n0(Math.max(T.p-T.c,0)):'–'],['Kg/semana necesarios (sin domingos)',(()=>{const n=Array.from({length:Math.max(dim-cut,0)},(_,i)=>new Date(y,m,cut+1+i).getDay()).filter(w=>w!==0).length;return T.p&&n>0?n0(Math.max(T.p-T.c,0)/n*6):'–'})()],
+    ['Acumulado del año '+y+' (hasta hoy)',n0(T.yc)],
+    ['Acumulado vs '+(y-1)+' (mismo período)',`<span class="${cl(T.yc-T.ya)}" style="font-size:inherit">${sg(T.yc-T.ya)} (${pc(T.ya?T.yc/T.ya-1:NaN)})</span>`],
+    ['Cumplimiento acumulado vs cierre '+(y-1),pc(T.yf?T.yc/T.yf:NaN)],['Cierre '+(y-1)+' (año completo)',n0(T.yf)]
   ].map(([l,v])=>`<div class="k"><span>${l}</span><b>${v}</b></div>`).join('');
   trend(T.p);
   const A=css('--acc'),B=css('--aa'),F=css('--mut'),L=css('--line');
@@ -181,8 +185,8 @@ function table(){
     {label:String(meta.y-1),data:top.map(r=>r.a),backgroundColor:css('--aa')},
     ...(top.some(r=>r.p)?[{label:'Proyección del mes',data:top.map(r=>r.p||null),backgroundColor:css('--prj')}]:[])]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:ax,y:{ticks:{color:css('--mut'),font:{size:10}},grid:{display:false}}},plugins:{legend:{labels:{color:css('--mut')}}}}});
-  const row=(n,r)=>`<tr><td title="${n}">${n}</td><td>${n0(r.c)}</td><td>${n0(r.a)}</td><td class="${cl(r.c-r.a)}">${sg(r.c-r.a)}</td><td class="${cl(r.c-r.a)}">${pc(r.a?r.c/r.a-1:NaN)}</td><td>${pc(r.f?r.c/r.f:NaN)}</td><td>${r.p?n0(r.p):'–'}</td><td>${r.p?n0(Math.max(r.p-r.c,0)):'–'}</td></tr>`;
-  $('tb').innerHTML=`<thead><tr><th>${tab}</th><th>Al día</th><th>${meta.y-1}</th><th>Δ Kg</th><th>Δ %</th><th>Cumpl.</th><th>Proyección</th><th>Faltan p/ proy.</th></tr></thead><tbody>${rs.filter(r=>lab(r).toLowerCase().includes(q)).map(r=>row(lab(r),r)).join('')}</tbody><tfoot>${row('Total',T)}</tfoot>`;
+  const row=(n,r)=>`<tr><td title="${n}">${n}</td><td>${n0(r.c)}</td><td>${n0(r.a)}</td><td class="${cl(r.c-r.a)}">${sg(r.c-r.a)}</td><td class="${cl(r.c-r.a)}">${pc(r.a?r.c/r.a-1:NaN)}</td><td>${pc(r.f?r.c/r.f:NaN)}</td><td>${r.p?n0(r.p):'–'}</td><td>${r.p?n0(Math.max(r.p-r.c,0)):'–'}</td><td class="${cl(r.yc-r.ya)}">${sg(r.yc-r.ya)}</td></tr>`;
+  $('tb').innerHTML=`<thead><tr><th>${tab}</th><th>Al día</th><th>${meta.y-1}</th><th>Δ Kg</th><th>Δ %</th><th>Cumpl.</th><th>Proyección</th><th>Faltan p/ proy.</th><th title="Acumulado del año menos mismo período del año anterior">Δ Kg acum.</th></tr></thead><tbody>${rs.filter(r=>lab(r).toLowerCase().includes(q)).map(r=>row(lab(r),r)).join('')}</tbody><tfoot>${row('Total',T)}</tfoot>`;
   $('q').hidden=rs.length<8;
 }
 $('tabs').innerHTML=['Zonas','Distribuidores','Formato x dist.','Comunas','Formatos'].map(t=>`<button data-t="${t}">${t}</button>`).join('');
@@ -210,5 +214,3 @@ try{
 }catch(e){$('st').textContent='No se pudieron cargar los datos: '+e.message}
 
 </script></body></html>
-
-</body></html>
