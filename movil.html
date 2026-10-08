@@ -62,6 +62,20 @@ input[type=search]{min-height:44px;font-size:16px}
 .it .g span{font-size:11px;color:var(--mut);display:block}
 .it .g em{display:block;font-style:normal;font-size:13.5px;color:var(--fg);font-variant-numeric:tabular-nums;font-weight:600}
 .it .g em.p{color:var(--pos)}.it .g em.n{color:var(--neg)}
+.mw{overflow-x:auto}
+.mt{width:100%;border-collapse:separate;border-spacing:2px;font-size:13px;font-variant-numeric:tabular-nums}
+.mt th,.mt td{text-align:center;padding:6px 8px;white-space:nowrap;border:0;border-radius:3px}
+.mt thead th{background:#6b7480;color:#fff;font-weight:700;position:static}
+.mt th:first-child,.mt td:first-child{position:sticky;left:0;background:#6b7480;color:#fff;font-weight:700;max-width:none;text-align:center;z-index:2}
+.mt td{background:var(--card);border:1px solid var(--line)}
+.mt td.g{color:var(--mut);opacity:.6}
+.mt .ac{font-weight:700}
+.mt tr.v td{background:rgba(21,128,61,.14);font-weight:700}
+.mt tr.v td.n{background:rgba(200,30,30,.13)}
+.mt tr.v td:first-child{background:#6b7480;color:#fff}
+.mnote{color:var(--mut);font-size:12px;margin:8px 0 0}
+@media (max-width:700px){#mf{width:100%;min-height:44px;font-size:16px}}
+@media (max-width:700px){.u{display:none}.mt th,.mt td{padding:6px 7px}}
 </style></head><body>
 <h1>Venta al día</h1>
 <p class="sub" id="sub">Kilos vendidos vs. mismo período del año anterior</p>
@@ -81,6 +95,7 @@ input[type=search]{min-height:44px;font-size:16px}
     <input type="search" id="q" placeholder="Buscar" hidden>
     <div id="tb" class="list"></div>
   </div>
+  <div class="card"><h2 id="tm"></h2><select id="mf" aria-label="Formato" style="margin-bottom:8px"></select><div class="mw"><table id="tmt" class="mt"></table></div><p class="mnote" id="tmn"></p></div>
   <div class="card"><h2 id="t2"></h2><div class="cv tall"><canvas id="c2"></canvas></div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -102,6 +117,8 @@ function calc(y,m){
   const gd=fill($('gd'),'Todos los distribuidores',[...new Set(mr.filter(r=>!gz||r.z===gz).map(r=>r.s))].sort());
   const fr=mr.filter(r=>(!gz||r.z===gz)&&(!gd||r.s===gd)),cur=fr.filter(r=>r.y===y),aa=fr.filter(r=>r.y===y-1);
   const yr=rows.filter(r=>(r.y===y||r.y===y-1)&&(!gz||r.z===gz)&&(!gd||r.s===gd));
+  const mo={c:Array(12).fill(0),a:Array(12).fill(0),x:Array(12).fill(0)};
+  yr.forEach(r=>{if(r.y===y){if(r.m<=m)mo.c[r.m]+=r.k}else{mo.x[r.m]+=r.k;if(r.m<m||(r.m===m&&r.d<=cut))mo.a[r.m]+=r.k}});
   const PR=(proy[y+'-'+m]||[]).filter(e=>(!gz||e.z===gz)&&(!gd||e.s===gd));
   const ixA={},ixC={},ixr=(L,I)=>L.forEach(r=>{const k=r.z+'\u0001'+r.s;(I[k]=I[k]||[]).push(r)});ixr(aa,ixA);ixr(cur,ixC);
   const split=(e,kf)=>{const k0=e.z+'\u0001'+e.s;
@@ -124,7 +141,7 @@ function calc(y,m){
   cur.forEach(r=>{G[gOf(r)].dc[r.d-1]+=r.k});aa.forEach(r=>{G[gOf(r)].da[r.d-1]+=r.k});
   const litS=new Set(mr.filter(r=>gOf(r)===2).map(r=>r.s));
   PR.forEach(e=>{G[e.z==='VENTA DIRECTA'?1:(litS.has(e.s)?2:0)].p+=e.p});
-  meta.G=G;
+  meta.G=G;meta.mo=mo;meta.yr=yr;
   res={Zonas:group(r=>r.z,e=>[[e.z,e.p]]),Distribuidores:group(r=>r.s,e=>[[e.s,e.p]]),Comunas:group(r=>r.c,e=>split(e,r=>r.c)),Formatos:group(r=>r.f,e=>split(e,r=>r.f)),'Por zona':group(r=>r.s,e=>[[e.s,e.p]]),'Formato x dist.':group(r=>r.s+'|'+r.f,e=>split(e,r=>r.f).map(([k,v])=>[e.s+'|'+k,v]))};
   const dv0=$('dsel').value;
   $('dsel').innerHTML=res.Distribuidores.map(r=>`<option>${r.n}</option>`).join('');
@@ -174,7 +191,7 @@ function draw(){
     ...(meta.tp.tc?[{label:'Proyección del mes (meta)',data:meta.tp.tc,borderColor:css('--prj'),backgroundColor:css('--prj'),pointRadius:0,borderWidth:2,borderDash:[2,3],tension:.2}]:[]),
     ...(meta.tp.rc?[{label:'Proyección según ritmo',data:meta.tp.rc,borderColor:css('--rit'),backgroundColor:css('--rit'),pointRadius:0,borderWidth:2,borderDash:[6,3],tension:.2}]:[])]},
     options:{responsive:true,maintainAspectRatio:false,scales:{x:ax,y:ax},plugins:{legend:{labels:{color:F}}}}});
-  table();daily();
+  table();monthly();daily();
 }
 const GN=['Distribuidores','Venta directa','Lituche'];
 let sel=[true,true,true];
@@ -197,6 +214,25 @@ function daily(){
     ...(td?[{type:'line',label:'Proyección diaria (meta)',data:td,borderColor:css('--prj'),backgroundColor:css('--prj'),pointRadius:0,borderWidth:2,borderDash:[2,3],tension:.2,stack:'tg'}]:[]),
     ...(rd?[{type:'line',label:'Proyección según ritmo',data:rd,borderColor:css('--rit'),backgroundColor:css('--rit'),pointRadius:2,borderWidth:2,borderDash:[6,3],tension:.2,stack:'rt'}]:[])]},
     options:{responsive:true,maintainAspectRatio:false,scales:{x:ax,y:ax},plugins:{legend:{labels:{color:css('--mut')}}}}});
+}
+function monthly(){
+  const {y,m,cut,dim,yr}=meta,part=cut<dim,N=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEPT','OCT','NOV','DIC'];
+  const sel=$('mf'),fl=[...new Set(yr.map(r=>r.f))].sort(),v0=sel.value;
+  sel.innerHTML='<option value="">Todos los formatos</option>'+fl.map(x=>`<option value="${x}">${x}</option>`).join('');
+  if(fl.includes(v0))sel.value=v0;
+  const fv=fl.includes(v0)?v0:'';
+  const mo={c:Array(12).fill(0),a:Array(12).fill(0),x:Array(12).fill(0)};
+  yr.forEach(r=>{if(fv&&r.f!==fv)return;if(r.y===y){if(r.m<=m)mo.c[r.m]+=r.k}else{mo.x[r.m]+=r.k;if(r.m<m||(r.m===m&&r.d<=cut))mo.a[r.m]+=r.k}});
+  const K=v=>n0(v)+'<span class="u"> Kg</span>',D=v=>(v>0?'+':'')+n0(v)+'<span class="u"> Kg</span>',cell=(v,c)=>`<td${c?` class="${c}"`:''}>${v}</td>`;
+  let sc=0,sa=0;for(let i=0;i<=m;i++){sc+=mo.c[i];sa+=mo.a[i]}
+  let h='<thead><tr><th>AÑO</th>'+N.map((x,i)=>`<th>${x}${part&&i===m?'*':''}</th>`).join('')+'<th class="ac">ACUM</th></tr></thead><tbody>';
+  h+=`<tr><td>${y-1}</td>${N.map((_,i)=>cell(K(i<=m?mo.a[i]:mo.x[i]),i>m?'g':'')).join('')}${cell(K(sa),'ac')}</tr>`;
+  h+=`<tr><td>${y}</td>${N.map((_,i)=>cell(i<=m?K(mo.c[i]):'–')).join('')}${cell(K(sc),'ac')}</tr>`;
+  h+=`<tr><td>DIF KG</td>${N.map((_,i)=>i<=m?cell(D(mo.c[i]-mo.a[i]),cl(mo.c[i]-mo.a[i])):cell('')).join('')}${cell(D(sc-sa),cl(sc-sa)+' ac')}</tr>`;
+  h+=`<tr class="v"><td>VAR%</td>${N.map((_,i)=>i<=m?cell(pc(mo.a[i]?(mo.c[i]-mo.a[i])/mo.a[i]:NaN),cl(mo.c[i]-mo.a[i])):cell('')).join('')}${cell(pc(sa?(sc-sa)/sa:NaN),cl(sc-sa)+' ac')}</tr></tbody>`;
+  $('tmt').innerHTML=h;
+  $('tm').textContent=`Comparación mensual ${y} vs ${y-1} (kilos)${fv?' · '+fv:''}`;
+  $('tmn').textContent=(part?`* ${MES[m]}: comparado hasta el día ${cut} en ambos años. `:'')+`ACUM: enero a ${MES[m].toLowerCase()}.`+(m<11?` Los meses en gris son de ${y-1} y aún no tienen comparación.`:'');
 }
 function table(){
   let rs=res[tab];const q=$('q').value.toLowerCase(),zs=tab==='Por zona',zv=$('zsel').value;
@@ -221,7 +257,7 @@ function table(){
 $('tabs').innerHTML=['Zonas','Distribuidores','Formato x dist.','Comunas','Formatos'].map(t=>`<button data-t="${t}">${t}</button>`).join('');
 $('tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;tab=t;$('q').value='';[...$('tabs').children].forEach(b=>b.classList.toggle('on',b.dataset.t===t));table()};
 $('tabs').children[0].classList.add('on');
-$('q').oninput=table;$('zsel').onchange=table;$('dsel').onchange=table;
+$('q').oninput=table;$('zsel').onchange=table;$('dsel').onchange=table;$('mf').onchange=monthly;
 $('gsel').innerHTML=GN.map((n,i)=>`<button data-g="${i}" class="on">${n}</button>`).join('');
 $('gsel').onclick=e=>{const t=e.target.dataset.g;if(t==null)return;const g=+t;if(sel[g]&&sel.filter(Boolean).length===1)return;sel[g]=!sel[g];e.target.classList.toggle('on',sel[g]);if(meta)daily()};
 const rec=()=>{const[y,m]=$('mes').value.split('-').map(Number);calc(y,m);draw()};
