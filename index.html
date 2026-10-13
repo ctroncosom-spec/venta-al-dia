@@ -243,7 +243,7 @@ function vales(){
   const f=r=>(r.y===y||r.y===y-1)&&(!gz||r.z===gz)&&(!gd||r.s===gd);
   const inP=r=>YTD?(r.m<m||(r.m===m&&r.d<=cut)):(r.m===m&&r.d<=cut);
   const V=vrows.filter(f),T=meta.yr;
-  const keys={Canal:r=>r.z==='VENTA DIRECTA'?'Venta directa':'Distribuidores',Zona:r=>r.z,Distribuidor:r=>r.s,Formato:r=>r.f};
+  const keys={Canal:r=>r.z==='VENTA DIRECTA'?'Venta directa':'Distribuidores',Zona:r=>r.z,Distribuidor:r=>r.s,Comuna:r=>r.c||'Sin comuna',Formato:r=>r.f};
   const key=keys[vgrp],M={},mk=k=>M[k]=M[k]||{n:k,vc:0,va:0,tc:0,ta:0};
   const add=(arr,a,b)=>arr.forEach(r=>{if(!inP(r))return;mk(key(r))[r.y===y?a:b]+=r.k});
   add(T,'tc','ta');add(V,'vc','va');
@@ -279,7 +279,7 @@ function vales(){
 }
 $('vp').innerHTML=[['m','Mes al día'],['y','Acumulado del año']].map(([k,t])=>`<button data-p="${k}" class="${k==='m'?'on':''}">${t}</button>`).join('');
 $('vp').onclick=e=>{const k=e.target.dataset.p;if(!k)return;vper=k;[...$('vp').children].forEach(b=>b.classList.toggle('on',b.dataset.p===k));if(meta)vales()};
-$('vg').innerHTML=['Canal','Zona','Distribuidor','Formato'].map(t=>`<button data-g="${t}" class="${t==='Canal'?'on':''}">${t}</button>`).join('');
+$('vg').innerHTML=['Canal','Zona','Distribuidor','Comuna','Formato'].map(t=>`<button data-g="${t}" class="${t==='Canal'?'on':''}">${t}</button>`).join('');
 $('vg').onclick=e=>{const k=e.target.dataset.g;if(!k)return;vgrp=k;[...$('vg').children].forEach(b=>b.classList.toggle('on',b.dataset.g===k));if(meta)vales()};
 
 function show(lbl){
