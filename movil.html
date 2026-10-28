@@ -178,7 +178,7 @@ function draw(){
     ['Cumplimiento vs cierre '+(y-1),`${pc(T.f?T.c/T.f:NaN)}`],
     ['Cierre estimado (ritmo '+(y-1)+')',n0(proj)],['Cierre '+(y-1),n0(T.f)],
     ['Proyección del mes',T.p?n0(T.p):'–'],['Avance vs proyección',T.p?pc(T.c/T.p):'–'],
-    ['Faltan para la proyección',T.p?n0(Math.max(T.p-T.c,0)):'–'],['Kg/semana necesarios (sin domingos)',(()=>{const n=Array.from({length:Math.max(dim-cut,0)},(_,i)=>new Date(y,m,cut+1+i).getDay()).filter(w=>w!==0).length;return T.p&&n>0?n0(Math.max(T.p-T.c,0)/n*6):'–'})()],
+    ['Faltan para la proyección',T.p?n0(Math.max(T.p-T.c,0)):'–'],...(()=>{const n=Array.from({length:Math.max(dim-cut,0)},(_,i)=>new Date(y,m,cut+1+i).getDay()).filter(w=>w!==0).length;const L='Kg necesarios (sin domingos)';if(!(T.p&&n>0))return [[L,'–']];const need=Math.max(T.p-T.c,0),d=need/n;return [[L,n0(d)+' <span style="display:block;font-size:12px">por día · '+n0(d*6)+' por semana · quedan '+n+(n===1?' día hábil':' días hábiles')+'</span>']]})(),
     ['Acumulado del año '+y+' (hasta hoy)',n0(T.yc)],
     ['Acumulado vs '+(y-1)+' (mismo período)',`<span class="${cl(T.yc-T.ya)}" style="font-size:inherit">${sg(T.yc-T.ya)} (${pc(T.ya?T.yc/T.ya-1:NaN)})</span>`],
     ['Cumplimiento acumulado vs cierre '+(y-1),pc(T.yf?T.yc/T.yf:NaN)],['Cierre '+(y-1)+' (año completo)',n0(T.yf)]
