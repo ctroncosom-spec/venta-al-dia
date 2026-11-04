@@ -235,20 +235,20 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
       <p class="ad-kpi-value"><span class="ad-hot" data-draw="k-alerta" data-source="canal" data-field="n_alerta">—</span><small>de <span data-draw="t-nvd" data-source="canal" data-field="n_vd">—</span></small></p>
       <p class="ad-kpi-sub"><span data-draw="k-alerta-dif" data-source="canal" data-field="dif_alerta">—</span> vs período anterior · <span data-draw="k-critico" data-source="canal" data-field="n_critico">—</span> en nivel crítico</p>
     </div>
-    <div class="ad-kpi" id="kpi-exceso">
-      <p class="ad-kpi-label">Kilos comerciales sobre el límite</p>
-      <p class="ad-kpi-value"><span data-draw="t-exceso" data-source="canal" data-field="exceso">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><span data-draw="k-exceso-dif" data-source="canal" data-field="dif_exceso">—</span> kg vs período anterior</p>
-    </div>
-    <div class="ad-kpi" id="kpi-canal">
+    <div class="ad-kpi" id="kpi-comercial">
       <p class="ad-kpi-label">Venta a clientes comerciales</p>
       <p class="ad-kpi-value"><span data-draw="k-com" data-source="canal" data-field="comercial">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><b class="ad-pct" data-draw="k-pct" data-source="canal" data-field="pct">—</b> de <span data-draw="k-total" data-source="canal" data-field="total">—</span> kg vendidos · <span data-draw="k-pct-dif" data-source="canal" data-field="dif_pp">—</span> pp vs mismo período del año anterior</p>
+      <p class="ad-kpi-sub"><span data-draw="k-com-dif" data-source="canal" data-field="dif_com">—</span> kg vs período anterior</p>
     </div>
-    <div class="ad-kpi" id="kpi-share">
-      <p class="ad-kpi-label">Kilos comerciales vendidos por VD en alerta</p>
-      <p class="ad-kpi-value"><span data-draw="k-com-alerta" data-source="canal" data-field="comercial_alerta">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><b class="ad-pct" data-draw="k-share" data-source="canal" data-field="share_alerta">—</b> de <span data-draw="k-com" data-source="canal" data-field="comercial">—</span> kg comerciales</p>
+    <div class="ad-kpi" id="kpi-pct">
+      <p class="ad-kpi-label">% de venta a clientes comerciales</p>
+      <p class="ad-kpi-value"><span data-draw="k-pct" data-source="canal" data-field="pct">—</span></p>
+      <p class="ad-kpi-sub"><span data-draw="k-pct-dif" data-source="canal" data-field="dif_pp">—</span> pp vs mismo período del año anterior · límite <span data-draw="r-limite" data-source="reglas" data-field="valor" data-where="regla=limite">—</span></p>
+    </div>
+    <div class="ad-kpi" id="kpi-total">
+      <p class="ad-kpi-label">Venta total</p>
+      <p class="ad-kpi-value"><span data-draw="k-total" data-source="canal" data-field="total">—</span><small>kg</small></p>
+      <p class="ad-kpi-sub"><span data-draw="k-total-dif" data-source="canal" data-field="dif_total">—</span> kg vs período anterior · <span data-draw="k-total-aa" data-source="canal" data-field="var_total_aa">—</span> vs mismo período del año anterior</p>
     </div>
   </section>
 
@@ -578,6 +578,9 @@ window.AD = (() => {
       ...c, grupo: f, mes: r[r.length - 1],
       dif_alerta: cp ? c.n_alerta - cp.n_alerta : null,
       dif_exceso: cp ? c.exceso - cp.exceso : null,
+      dif_com: cp ? c.comercial - cp.comercial : null,
+      dif_total: cp ? c.total - cp.total : null,
+      var_total_aa: ca && ca.total ? c.total / ca.total - 1 : null,
       dif_pp: ca && c.pct != null && ca.pct != null ? (c.pct - ca.pct) * 100 : null,
     };
   };
@@ -990,7 +993,10 @@ dash.calc('tablero', {
   per('k-critico', (r) => AD.n0(r.n_critico));
   per('k-alerta-dif', (r) => AD.sgn(r.dif_alerta, AD.n0), (r) => r.dif_alerta);
   per('k-exceso-dif', (r) => AD.sgn(r.dif_exceso, AD.n0), (r) => r.dif_exceso);
-  per('k-pct', (r) => AD.pct(r.pct));
+  per('k-pct', (r) => AD.pct(r.pct), (r) => (r.pct > AD.regla('limite') ? 1 : 0));
+  per('k-com-dif', (r) => AD.sgn(r.dif_com, AD.n0));
+  per('k-total-dif', (r) => AD.sgn(r.dif_total, AD.n0), (r) => -r.dif_total);
+  per('k-total-aa', (r) => (r.var_total_aa == null ? '—' : AD.sgn(r.var_total_aa * 100, AD.dec1) + ' %'), (r) => -r.var_total_aa);
   per('k-pct-dif', (r) => AD.sgn(r.dif_pp, AD.dec1), (r) => r.dif_pp);
   per('k-share', (r) => AD.pct(r.share_alerta));
   per('k-com-alerta', (r) => AD.n0(r.comercial_alerta));
