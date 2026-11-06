@@ -208,6 +208,14 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
 .ad .ad-presets{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-end}
 .ad .ad-presets button{font:inherit;font-size:var(--cds-font-size-caption);color:var(--color-fg);background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap}
 .ad .ad-presets button:hover{border-color:var(--color-fg-muted)}
+.ad .ad-dl{display:grid;justify-items:end;gap:4px;min-width:0}
+.ad .ad-dl-btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:var(--cds-font-size-caption);font-weight:600;color:var(--color-fg);background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:6px 12px;cursor:pointer;white-space:nowrap}
+.ad .ad-dl-btn:hover{border-color:var(--gasco-azul);color:var(--gasco-azul-txt)}
+.ad .ad-dl-btn:focus-visible{outline:2px solid var(--color-fg);outline-offset:1px}
+.ad .ad-dl-btn[aria-busy=true]{opacity:.6;cursor:progress}
+.ad .ad-dl-msg{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);text-align:right}
+.ad .ad-dl-err{color:var(--color-bad)}
+@media (max-width:640px){.ad .ad-dl{justify-items:start}.ad .ad-dl-msg{text-align:left}}
 .ad .ad-presets button.on{background:var(--color-fg);border-color:var(--color-fg);color:var(--color-bg);font-weight:600}
 .ad .ad-presets button:focus-visible{outline:2px solid var(--color-fg);outline-offset:1px}
 .ad .ad-estado{display:none}
@@ -369,6 +377,14 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
       <div>
         <h2>Clientes comerciales</h2>
         <p class="ad-card-note">Clientes que compraron en <span data-draw="t-mes" data-source="canal" data-field="mes_nombre">—</span>, con sus kilos del período. Las señales miran los 12 meses de <span data-draw="cli-periodo" data-source="clientes" data-field="periodo">—</span> y no prueban un mal uso: indican qué revisar primero.</p>
+      </div>
+      <div class="ad-dl">
+        <button type="button" class="ad-dl-btn" id="descargar-clientes" aria-describedby="dl-ayuda">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M2.5 11.5v2h11v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Descargar Excel
+        </button>
+        <span class="ad-dl-msg" id="dl-ayuda">Las filas de la tabla, con el período y el filtro elegidos</span>
+        <span class="ad-dl-msg ad-dl-err" id="dl-error" hidden role="status">No se pudo descargar en esta vista. Prueba abrir el dashboard en el navegador.</span>
       </div>
     </div>
     <div class="ad-scroll">
@@ -1451,11 +1467,21 @@ dash.draw('heatmap', (el) => {
     return wrap;
   };
 
+  // Filas de «Clientes comerciales», iguales en la tabla y en el Excel descargado.
+  const filasClientes = () => {
+    const v = AD.vd();
+    if (!v) {
+      const cs = AD.clientesP().sort((a, b) => b.kilos_p - a.kilos_p), tot = cs.reduce((a, c) => a + c.kilos_p, 0);
+      return cs.map((c) => ({...c, share: tot ? c.kilos_p / tot : null}));
+    }
+    return AD.pares().filter((o) => o.vendedor === v).sort((a, b) => b.kilos_p - a.kilos_p).map((o) => ({...o, share: o.share_p, ventas_directas: o.vendedor}));
+  };
+
   dash.draw('ficha-clientes', (tb) => {
     if (AD.wait(tb, ['clientes', 'clientes_total', ...BASE], true)) return;
     const v = AD.vd();
     if (!v) {
-      const cs = AD.clientesP().sort((a, b) => b.kilos_p - a.kilos_p), tot = cs.reduce((a, c) => a + c.kilos_p, 0);
+      const cs = filasClientes();
       tb.replaceChildren(...cs.map((c) => {
         const tr = document.createElement('tr');
         tr.dataset.key = AD.enc(c.cliente_id) + ',' + AD.enc(c.mes);
@@ -1463,7 +1489,7 @@ dash.draw('heatmap', (el) => {
         celda(tr, 'ad-sec', c.cliente_id);
         celda(tr, 'ad-sec', c.tipo);
         celda(tr, 'ad-num', AD.n0(c.kilos_p));
-        celda(tr, 'ad-num', AD.pct(tot ? c.kilos_p / tot : null));
+        celda(tr, 'ad-num', AD.pct(c.share));
         celda(tr, 'ad-num ad-sec', AD.n0(c.pedidos_p));
         celda(tr, 'ad-num ad-sec', AD.n0(c.kilos));
         celda(tr, 'ad-num', AD.descTxt(c));
@@ -1472,8 +1498,7 @@ dash.draw('heatmap', (el) => {
       }));
       return;
     }
-    const rs = AD.pares().filter((o) => o.vendedor === v).sort((a, b) => b.kilos_p - a.kilos_p);
-    tb.replaceChildren(...rs.map((o) => {
+    tb.replaceChildren(...filasClientes().map((o) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(o.vendedor) + ',' + AD.enc(o.cliente_id) + ',' + AD.enc(o.mes);
       celda(tr, 'ad-name', o.cliente);
@@ -1488,6 +1513,152 @@ dash.draw('heatmap', (el) => {
       return tr;
     }));
   });
+
+  // ---------- Descarga en Excel de «Clientes comerciales» ----------
+  const XLSX = (() => {
+    const enc = new TextEncoder();
+    const CRC = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+    const crc32 = (b) => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+    // ZIP sin compresión: suficiente para un libro de Excel.
+    const zip = (files) => {
+      const parts = [], central = [];
+      let off = 0;
+      files.forEach(([name, text]) => {
+        const nm = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+        const h = new DataView(new ArrayBuffer(30));
+        h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+        h.setUint16(10, 0, true); h.setUint16(12, 0x21, true);
+        h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+        const c = new DataView(new ArrayBuffer(46));
+        c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+        c.setUint16(14, 0x21, true);
+        c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+        parts.push(new Uint8Array(h.buffer), nm, data);
+        central.push(new Uint8Array(c.buffer), nm);
+        off += 30 + nm.length + data.length;
+      });
+      const size = central.reduce((a, b) => a + b.length, 0);
+      const e = new DataView(new ArrayBuffer(22));
+      e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+      return new Blob([...parts, ...central, new Uint8Array(e.buffer)], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    };
+    const esc = (v) => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const col = (i) => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+    const NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    // Estilos: 1 encabezado, 2 kilos, 3 % con un decimal, 4 % entero, 5 etiqueta, 6 título, 7 texto ajustado.
+    const STY = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts>'
+      + '<fonts count="4"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><name val="Calibri"/><family val="2"/></font>'
+      + '<font><b/><sz val="14"/><color rgb="FF16202C"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font></fonts>'
+      + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF009ED9"/><bgColor indexed="64"/></patternFill></fill></fills>'
+      + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+      + '<xf numFmtId="0" fontId="3" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>'
+      + '<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '<xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+      + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+      + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs>'
+      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    const celdaXml = (ref, v, s) => {
+      if (v == null || v === '' || (typeof v === 'number' && !isFinite(v))) return s ? '<c r="' + ref + '" s="' + s + '"/>' : '';
+      if (typeof v === 'number') return '<c r="' + ref + '"' + (s ? ' s="' + s + '"' : '') + '><v>' + v + '</v></c>';
+      return '<c r="' + ref + '" t="inlineStr"' + (s ? ' s="' + s + '"' : '') + '><is><t xml:space="preserve">' + esc(String(v).replace(/\u00a0/g, ' ')) + '</t></is></c>';
+    };
+    // hojas: [{nombre, columnas: [{titulo, ancho, estilo}], filas: [[...]], tabla: true|false, estilos?: [[...]]}]
+    const hoja = (h) => {
+      const n = h.filas.length + (h.tabla ? 1 : 0), ult = col(h.columnas.length - 1);
+      let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet ' + NS + '>' + (h.tabla ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '');
+      x += '<dimension ref="A1:' + ult + Math.max(1, n) + '"/>';
+      x += '<sheetViews><sheetView workbookViewId="0"' + (h.tabla ? '' : ' showGridLines="0"') + '>' + (h.tabla ? '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' : '') + '</sheetView></sheetViews>';
+      x += '<sheetFormatPr defaultRowHeight="15"/><cols>' + h.columnas.map((c, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + c.ancho + '" customWidth="1"/>').join('') + '</cols><sheetData>';
+      if (h.tabla) x += '<row r="1" ht="32" customHeight="1">' + h.columnas.map((c, i) => celdaXml(col(i) + 1, c.titulo, 1)).join('') + '</row>';
+      h.filas.forEach((f, j) => {
+        const r = j + (h.tabla ? 2 : 1);
+        x += '<row r="' + r + '">' + f.map((v, i) => celdaXml(col(i) + r, v, h.estilos ? (h.estilos[j] || [])[i] : h.columnas[i].estilo)).join('') + '</row>';
+      });
+      x += '</sheetData>';
+      if (h.tabla && h.filas.length) x += '<autoFilter ref="A1:' + ult + n + '"/>';
+      return x + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';
+    };
+    const libro = (hojas) => {
+      const defs = hojas.map((h, i) => (h.tabla && h.filas.length ? '<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">\'' + esc(h.nombre) + '\'!$A$1:$' + col(h.columnas.length - 1) + '$' + (h.filas.length + 1) + '</definedName>' : '')).join('');
+      return zip([
+        ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+          + hojas.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>'],
+        ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+        ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook ' + NS + '><bookViews><workbookView activeTab="0"/></bookViews><sheets>' + hojas.map((h, i) => '<sheet name="' + esc(h.nombre) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets>' + (defs ? '<definedNames>' + defs + '</definedNames>' : '') + '</workbook>'],
+        ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + hojas.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (hojas.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+        ['xl/styles.xml', STY],
+        ...hojas.map((h, i) => ['xl/worksheets/sheet' + (i + 1) + '.xml', hoja(h)]),
+      ]);
+    };
+    return {libro};
+  })();
+
+  // El dashboard entrega archivos con su propia confirmación; el HTML suelto descarga directo.
+  let bajadas = null;
+  try { if (window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then((d) => { bajadas = d; }, () => {}); } catch (e) { /* sin capacidad */ }
+  const guardar = async (nombre, blob) => {
+    if (bajadas) {
+      try { await bajadas.save({filename: nombre, data: blob}); return true; }
+      catch (e) { return e && (e.code === 'declined' || e.code === 'rate_limited'); }
+    }
+    try {
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url;
+      a.download = nombre;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return true;
+    } catch (e) { return false; }
+  };
+  const nombreArchivo = (v) => ('Clientes comerciales ' + AD.etiqueta() + ' ' + (v || 'todas las VD')).replace(/\u00a0/g, ' ').replace(/[\u2013\u2014]/g, '-').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150) + '.xlsx';
+  const libroClientes = () => {
+    const v = AD.vd(), fs = filasClientes();
+    const pctFrac = (x) => (x == null ? null : Math.round(x * 10000) / 10000);
+    const columnas = [
+      {titulo: 'Cliente', ancho: 42}, {titulo: 'Código', ancho: 12}, {titulo: 'Tipo', ancho: 16},
+      {titulo: v ? 'Venta directa' : 'Ventas directas que le vendieron', ancho: 40},
+      {titulo: 'Kg del período', ancho: 14, estilo: 2}, {titulo: '% de la venta comercial del período', ancho: 18, estilo: 3},
+      {titulo: 'Pedidos del período', ancho: 12, estilo: 2}, {titulo: 'Kg en 12 meses', ancho: 14, estilo: 2},
+      {titulo: 'Descuento mínimo', ancho: 12, estilo: 4}, {titulo: 'Descuento máximo', ancho: 12, estilo: 4},
+      {titulo: 'Formatos con descuento', ancho: 12, estilo: 2}, {titulo: 'Señales (12 meses)', ancho: 60},
+    ];
+    const filas = fs.map((r) => [r.cliente, Number(r.cliente_id) || r.cliente_id, r.tipo, r.ventas_directas || '', r.kilos_p, pctFrac(r.share), r.pedidos_p, r.kilos,
+      r.descuento > 0 ? pctFrac(r.descuento_min) : null, r.descuento > 0 ? pctFrac(r.descuento) : null, r.formatos_descuento || null, r.senales || '']);
+    const ahora = new Date(), dd = (n) => String(n).padStart(2, '0');
+    const info = [
+      ['Alertas de descuento comercial · Gasco', ''],
+      ['', ''],
+      ['Tabla', 'Clientes comerciales'],
+      ['Período', AD.etiqueta()],
+      ['Venta directa', v || 'Todas las ventas directas'],
+      ['Señales', 'Miran los 12 meses de ' + ((fs[0] && fs[0].periodo) || ((AD.rows('clientes').find((x) => x.mes === AD.mes()) || {}).periodo) || '—') + '. No prueban un mal uso: indican qué revisar primero.'],
+      ['Descuento', 'Descuento comercial ZDPE de cada cliente; si varía entre formatos, el mínimo y el máximo.'],
+      ['Clientes', fs.length],
+      ['Descargado', dd(ahora.getDate()) + '-' + dd(ahora.getMonth() + 1) + '-' + ahora.getFullYear() + ' ' + dd(ahora.getHours()) + ':' + dd(ahora.getMinutes())],
+    ];
+    return XLSX.libro([
+      {nombre: 'Clientes', columnas, filas, tabla: true},
+      {nombre: 'Información', columnas: [{titulo: '', ancho: 16}, {titulo: '', ancho: 90}], filas: info, tabla: false,
+        estilos: info.map((_, i) => (i === 0 ? [6, 0] : [5, 7]))},
+    ]);
+  };
+  document.querySelectorAll('#descargar-clientes').forEach((btn) => btn.addEventListener('click', async () => {
+    if (btn.getAttribute('aria-busy') === 'true' || !AD.ok('clientes', 'clientes_total', ...BASE)) return;
+    btn.setAttribute('aria-busy', 'true');
+    document.querySelectorAll('#dl-error').forEach((e) => { e.hidden = true; });
+    let ok = false;
+    try { ok = await guardar(nombreArchivo(AD.vd()), libroClientes()); } catch (e) { console.error(e); }
+    btn.removeAttribute('aria-busy');
+    document.querySelectorAll('#dl-error').forEach((e) => { e.hidden = ok; });
+  }));
 
   const lista = () => AD.clientesP().filter((c) => c.n_senales > 0).sort((a, b) => (b.kilos || 0) - (a.kilos || 0));
   const cliSel = () => {
