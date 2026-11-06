@@ -216,6 +216,12 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
 .ad .ad-dl-msg{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);text-align:right}
 .ad .ad-dl-err{color:var(--color-bad)}
 @media (max-width:640px){.ad .ad-dl{justify-items:start}.ad .ad-dl-msg{text-align:left}}
+.ad .ad-inact-bar{display:flex;flex-wrap:wrap;gap:var(--cds-gap-md);align-items:flex-end;justify-content:space-between;min-width:0}
+.ad .ad-inact-bar .ad-field{flex:0 1 14rem}
+.ad .ad-inact-bar select{width:100%}
+.ad .ad-inact-bar input[type=search]{flex:1 1 14rem}
+.ad .ad-table tr.is-nuevo td:first-child{box-shadow:inset 3px 0 0 var(--color-warn)}
+.ad .ad-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;font-size:11px;font-weight:600;line-height:18px;color:var(--color-warn);border:1px solid color-mix(in srgb,var(--color-warn) 45%,transparent);white-space:nowrap}
 .ad .ad-presets button.on{background:var(--color-fg);border-color:var(--color-fg);color:var(--color-bg);font-weight:600}
 .ad .ad-presets button:focus-visible{outline:2px solid var(--color-fg);outline-offset:1px}
 .ad .ad-estado{display:none}
@@ -455,6 +461,59 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
         <p class="ad-note">Toca una señal para ver qué significa.</p>
       </div>
     </div>
+  </section>
+
+  <section class="ad-card" id="sin-movimiento">
+    <div class="ad-card-head">
+      <div>
+        <h2>Clientes comerciales sin movimiento</h2>
+        <p class="ad-card-note">Clientes que ya compraron como cliente comercial y no registran compras en los últimos <span data-draw="in-n">—</span> meses o más, al cierre de <span data-draw="in-mes" data-source="canal" data-field="mes_nombre">—</span>. Ordenados por los kilos que compraban por mes antes de dejar de comprar. Con una venta directa en el filtro general, muestra los clientes cuya última compra fue con ella.</p>
+      </div>
+      <div class="ad-dl">
+        <button type="button" class="ad-dl-btn" id="descargar-inactivos" aria-describedby="dl-ayuda-inact">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M2.5 11.5v2h11v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Descargar Excel
+        </button>
+        <span class="ad-dl-msg" id="dl-ayuda-inact">Todos los clientes de la lista, con los filtros elegidos</span>
+        <span class="ad-dl-msg ad-dl-err" id="dl-error-inact" hidden role="status">No se pudo descargar en esta vista. Prueba abrir el dashboard en el navegador.</span>
+      </div>
+    </div>
+    <div class="ad-stats" id="inact-resumen">
+      <div class="ad-stat"><span>Clientes sin compras</span><strong data-draw="in-clientes" data-source="inactividad" data-field="cliente_id">—</strong></div>
+      <div class="ad-stat"><span>Kg por mes que compraban</span><strong data-draw="in-kg" data-source="inactividad" data-field="prom_mes">—</strong></div>
+      <div class="ad-stat"><span>Se sumaron este mes</span><strong data-draw="in-nuevos" data-source="inactividad" data-field="meses_sin_compra">—</strong></div>
+      <div class="ad-stat"><span>Siguen con descuento vigente</span><strong data-draw="in-desc" data-source="inactividad" data-field="descuento">—</strong></div>
+    </div>
+    <div class="ad-inact-bar">
+      <label class="ad-field" for="ad-inact">Sin compras hace
+        <select id="ad-inact" data-draw="inact-select" aria-label="Meses sin compras">
+          <option value="2">2 meses o más</option>
+          <option value="3">3 meses o más</option>
+          <option value="6">6 meses o más</option>
+          <option value="12">12 meses o más</option>
+        </select>
+      </label>
+      <input type="search" id="ad-buscar-inact" placeholder="Buscar cliente, código o venta directa" aria-label="Buscar cliente sin movimiento, código o venta directa">
+    </div>
+    <div class="ad-scroll ad-tall">
+      <table class="ad-table" data-source="inactividad" data-row-key="cliente_id,mes" aria-label="Clientes comerciales sin movimiento">
+        <thead><tr>
+          <th data-field="cliente">Cliente</th>
+          <th data-field="cliente_id" class="ad-sec">Código</th>
+          <th data-field="tipo" class="ad-sec">Tipo</th>
+          <th data-field="ventas_directas">Venta directa de su última compra</th>
+          <th data-field="ultima_compra">Última compra</th>
+          <th data-field="meses_sin_compra" class="ad-num">Meses sin compra</th>
+          <th data-field="prom_mes" class="ad-num" title="Promedio por mes de los 12 meses que terminan en su última compra">Kg por mes antes</th>
+          <th data-field="meses_con_compra_12" class="ad-num ad-sec" title="Meses con compra en los 12 meses que terminan en su última compra">Meses con compra (de 12)</th>
+          <th data-field="descuento" class="ad-num" title="Descuento comercial ZDPE; si varía entre formatos, va del menor al mayor">Descuento</th>
+        </tr></thead>
+        <tbody data-draw="inact-body"></tbody>
+      </table>
+    </div>
+    <p class="ad-note" id="inact-vacio" hidden>Ningún cliente comercial cumple esta condición con los filtros elegidos.</p>
+    <p class="ad-note"><span class="ad-tag" style="margin-left:0">nuevo</span> dejó de comprar justo en el plazo elegido: su última compra fue hace exactamente <span data-draw="in-n">—</span> meses.</p>
+    <p class="ad-note" id="inact-nunca">Además, <b data-draw="in-nunca" data-source="descuentos clientes_mes">—</b> clientes tienen descuento vigente en el archivo ZDPE y no registran ninguna compra en la base comercial, que parte en <span data-draw="in-inicio" data-source="clientes_mes" data-field="mes">—</span>.</p>
   </section>
 
 
@@ -1618,6 +1677,7 @@ dash.draw('heatmap', (el) => {
       return true;
     } catch (e) { return false; }
   };
+  AD.xlsx = {libro: XLSX.libro, guardar};
   const nombreArchivo = (v) => ('Clientes comerciales ' + AD.etiqueta() + ' ' + (v || 'todas las VD')).replace(/\u00a0/g, ' ').replace(/[\u2013\u2014]/g, '-').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150) + '.xlsx';
   const libroClientes = () => {
     const v = AD.vd(), fs = filasClientes();
@@ -1801,6 +1861,187 @@ dash.draw('heatmap', (el) => {
     t.addEventListener('click', elegir);
     t.addEventListener('keydown', (e) => { if (e.key === 'Enter') elegir(e); });
   });
+})();
+</script>
+<script>
+// ---------- Clientes comerciales sin movimiento ----------
+dash.calc('inactividad', {
+  title: 'Clientes sin compras',
+  description: 'Para cada mes, los clientes comerciales que ya habían comprado y llevan 2 meses o más sin comprar: su última compra, los kilos de los 12 meses que terminan en esa compra, las ventas directas de esa compra y su descuento.',
+  inputs: ['clientes_mes', 'clientes_perfil', 'descuentos'],
+  fn: (clientes_mes, clientes_perfil, descuentos) => {
+    const idx = (m) => Number(m.slice(0, 4)) * 12 + Number(m.slice(5, 7)) - 1;
+    const meses = [...new Set(clientes_mes.map((r) => r.mes))].sort();
+    const inicio = idx(meses[0]);
+    const tipo = new Map();
+    clientes_perfil.forEach((p) => { if (!tipo.has(String(p.cliente_id))) tipo.set(String(p.cliente_id), p.tipo); });
+    const D = new Map();
+    descuentos.forEach((x) => {
+      const v = Number(x.descuento), id = String(x.cliente_id);
+      if (!(v > 0)) return;
+      const o = D.get(id) || {min: v, max: v, n: 0};
+      o.min = Math.min(o.min, v); o.max = Math.max(o.max, v); o.n++;
+      D.set(id, o);
+    });
+    const C = new Map();
+    clientes_mes.forEach((r) => {
+      if (!(Number(r.kilos) > 0)) return;
+      const id = String(r.cliente_id), c = C.get(id) || {cliente: r.cliente, M: new Map()};
+      const m = c.M.get(r.mes) || {kilos: 0, vds: new Set()};
+      m.kilos += Number(r.kilos);
+      m.vds.add(r.vendedor);
+      c.M.set(r.mes, m);
+      C.set(id, c);
+    });
+    const out = [];
+    C.forEach((c, id) => {
+      const compras = [...c.M.keys()].sort(), dc = D.get(id);
+      // Kilos y meses con compra de los 12 meses que terminan en cada compra.
+      const ventana = compras.map((u, j) => {
+        let kilos = 0, n = 0;
+        for (let i = j; i >= 0 && idx(u) - idx(compras[i]) < 12; i--) { kilos += c.M.get(compras[i]).kilos; n++; }
+        return {kilos, n, largo: Math.min(12, idx(u) - inicio + 1)};
+      });
+      let j = -1;
+      meses.forEach((m) => {
+        while (j + 1 < compras.length && compras[j + 1] <= m) j++;
+        if (j < 0) return;
+        const u = compras[j], sin = idx(m) - idx(u);
+        if (sin < 2) return;
+        const w = ventana[j];
+        out.push({
+          cliente_id: id, mes: m, cliente: c.cliente, tipo: tipo.get(id) || '',
+          ultima_compra: u, meses_sin_compra: sin, kilos_ultima: c.M.get(u).kilos,
+          kilos_12: w.kilos, meses_con_compra_12: w.n, meses_ventana: w.largo, prom_mes: Math.round(w.kilos / w.largo),
+          ventas_directas: [...c.M.get(u).vds].sort().join(' · '),
+          descuento: dc ? dc.max : null, descuento_min: dc ? dc.min : null, formatos_descuento: dc ? dc.n : 0,
+        });
+      });
+    });
+    return out;
+  },
+});
+
+(() => {
+  const INS = ['inactividad', 'canal', 'cuota', 'reglas'];
+  const nMeses = () => { const n = Number(dash.params().inact); return [2, 3, 6, 12].includes(n) ? n : 2; };
+  const ultimaTxt = (m) => AD.MC[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(0, 4);
+  // Clientes sin compras al cierre del período, con el filtro de venta directa (sin la búsqueda).
+  const filas = () => {
+    const h = AD.mes(), n = nMeses(), v = AD.vd();
+    return AD.rows('inactividad')
+      .filter((r) => r.mes === h && r.meses_sin_compra >= n && (!v || String(r.ventas_directas).split(' · ').includes(v)))
+      .sort((a, b) => b.prom_mes - a.prom_mes || b.kilos_12 - a.kilos_12);
+  };
+  const celda = (tr, cls, contenido) => {
+    const td = document.createElement('td');
+    if (cls) td.className = cls;
+    if (contenido instanceof Node) td.appendChild(contenido); else td.textContent = contenido;
+    tr.appendChild(td);
+    return td;
+  };
+
+  dash.draw('in-n', (el) => { el.textContent = AD.n0(nMeses()); });
+  // Esta lámina mira el cierre del período (el mes «Hasta»), no el rango.
+  dash.draw('in-mes', (el) => {
+    if (AD.wait(el, ['canal'])) return;
+    el.dataset.where = AD.where({grupo: 'Todas', mes: AD.mes()});
+    el.textContent = AD.mesLargo(AD.mes());
+  });
+  dash.draw('inact-select', (el) => { if (el !== document.activeElement) el.value = String(nMeses()); });
+  document.querySelectorAll('#ad-inact').forEach((sel) => sel.addEventListener('change', () => dash.setParams({inact: Number(sel.value) === 2 ? null : Number(sel.value)})));
+
+  // La nota de clientes que nunca compraron no aplica con una venta directa elegida.
+  const notaNunca = () => document.querySelectorAll('#inact-nunca').forEach((e) => { e.hidden = !!AD.vd(); });
+  dash.onData(notaNunca);
+  dash.draw('inact-body', (tb) => {
+    notaNunca();
+    const vacio = document.querySelectorAll('#inact-vacio');
+    if (AD.wait(tb, INS, true)) { vacio.forEach((e) => { e.hidden = true; }); return; }
+    const n = nMeses();
+    const q = [...document.querySelectorAll('#ad-buscar-inact')].map((i) => i.value.trim().toLowerCase()).join('');
+    const rs = filas().filter((r) => !q || (r.cliente + ' ' + r.cliente_id + ' ' + r.ventas_directas).toLowerCase().includes(q));
+    vacio.forEach((e) => { e.hidden = rs.length > 0; });
+    tb.replaceChildren(...rs.map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = AD.enc(r.cliente_id) + ',' + AD.enc(r.mes);
+      if (r.meses_sin_compra === n) tr.className = 'is-nuevo';
+      const nom = celda(tr, 'ad-name', r.cliente);
+      if (r.meses_sin_compra === n) { const t = document.createElement('span'); t.className = 'ad-tag'; t.textContent = 'nuevo'; nom.appendChild(t); }
+      celda(tr, 'ad-sec', r.cliente_id);
+      celda(tr, 'ad-sec', r.tipo);
+      celda(tr, '', r.ventas_directas);
+      celda(tr, '', ultimaTxt(r.ultima_compra));
+      celda(tr, 'ad-num', AD.n0(r.meses_sin_compra));
+      celda(tr, 'ad-num', AD.n0(r.prom_mes));
+      celda(tr, 'ad-num ad-sec', AD.n0(r.meses_con_compra_12) + ' de ' + AD.n0(r.meses_ventana));
+      celda(tr, 'ad-num', AD.descTxt(r));
+      return tr;
+    }));
+  });
+  document.querySelectorAll('#ad-buscar-inact').forEach((i) => i.addEventListener('input', () => dash.draw('inact-body')));
+
+  const stat = (name, f) => dash.draw(name, (el) => {
+    if (AD.wait(el, INS)) return;
+    el.dataset.where = AD.where({mes: AD.mes()});
+    el.textContent = f(filas());
+  });
+  stat('in-clientes', (rs) => AD.n0(rs.length));
+  stat('in-kg', (rs) => AD.n0(rs.reduce((a, r) => a + r.prom_mes, 0)));
+  stat('in-nuevos', (rs) => AD.n0(rs.filter((r) => r.meses_sin_compra === nMeses()).length));
+  stat('in-desc', (rs) => AD.n0(rs.filter((r) => r.descuento > 0).length));
+
+  // Clientes con descuento que nunca compraron en la base (no se pueden asignar a una venta directa).
+  dash.draw('in-nunca', (el) => {
+    if (AD.wait(el, ['descuentos', 'clientes_mes'])) return;
+    const compraron = new Set(AD.rows('clientes_mes').map((r) => String(r.cliente_id)));
+    el.textContent = AD.n0(new Set(AD.rows('descuentos').map((x) => String(x.cliente_id)).filter((id) => !compraron.has(id))).size);
+  });
+  dash.draw('in-inicio', (el) => {
+    if (AD.wait(el, ['clientes_mes'])) return;
+    const m = AD.rows('clientes_mes').map((r) => r.mes).sort()[0];
+    el.dataset.where = AD.where({mes: m});
+    el.textContent = AD.mesLargo(m);
+  });
+
+  // Descarga en Excel
+  document.querySelectorAll('#descargar-inactivos').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!AD.xlsx || btn.getAttribute('aria-busy') === 'true' || !AD.ok(...INS)) return;
+    btn.setAttribute('aria-busy', 'true');
+    document.querySelectorAll('#dl-error-inact').forEach((e) => { e.hidden = true; });
+    const v = AD.vd(), n = nMeses(), rs = filas(), pctFrac = (x) => (x == null ? null : Math.round(x * 10000) / 10000);
+    const columnas = [
+      {titulo: 'Cliente', ancho: 42}, {titulo: 'Código', ancho: 12}, {titulo: 'Tipo', ancho: 16},
+      {titulo: 'Venta directa de su última compra', ancho: 40}, {titulo: 'Última compra', ancho: 14},
+      {titulo: 'Meses sin compra', ancho: 11, estilo: 2}, {titulo: 'Kg por mes antes (promedio 12 meses hasta la última compra)', ancho: 18, estilo: 2},
+      {titulo: 'Kg de la última compra (mes)', ancho: 14, estilo: 2}, {titulo: 'Kg 12 meses hasta la última compra', ancho: 14, estilo: 2},
+      {titulo: 'Meses con compra', ancho: 11, estilo: 2}, {titulo: 'Meses considerados', ancho: 11, estilo: 2},
+      {titulo: 'Descuento mínimo', ancho: 12, estilo: 4}, {titulo: 'Descuento máximo', ancho: 12, estilo: 4}, {titulo: 'Nuevo este mes', ancho: 10},
+    ];
+    const filasX = rs.map((r) => [r.cliente, Number(r.cliente_id) || r.cliente_id, r.tipo, r.ventas_directas, ultimaTxt(r.ultima_compra), r.meses_sin_compra,
+      r.prom_mes, r.kilos_ultima, r.kilos_12, r.meses_con_compra_12, r.meses_ventana,
+      r.descuento > 0 ? pctFrac(r.descuento_min) : null, r.descuento > 0 ? pctFrac(r.descuento) : null, r.meses_sin_compra === n ? 'Sí' : '']);
+    const ahora = new Date(), dd = (x) => String(x).padStart(2, '0');
+    const info = [
+      ['Alertas de descuento comercial · Gasco', ''], ['', ''],
+      ['Tabla', 'Clientes comerciales sin movimiento'],
+      ['Condición', 'Ya compraron como cliente comercial y no registran compras hace ' + n + ' meses o más'],
+      ['Al cierre de', AD.mesLargo(AD.mes())],
+      ['Venta directa', v ? v + ' (clientes cuya última compra fue con ella)' : 'Todas las ventas directas'],
+      ['Kg por mes antes', 'Promedio por mes de los 12 meses que terminan en su última compra (menos meses si la base no alcanza).'],
+      ['Clientes', rs.length],
+      ['Descargado', dd(ahora.getDate()) + '-' + dd(ahora.getMonth() + 1) + '-' + ahora.getFullYear() + ' ' + dd(ahora.getHours()) + ':' + dd(ahora.getMinutes())],
+    ];
+    const libro = AD.xlsx.libro([
+      {nombre: 'Sin movimiento', columnas, filas: filasX, tabla: true},
+      {nombre: 'Información', columnas: [{titulo: '', ancho: 16}, {titulo: '', ancho: 90}], filas: info, tabla: false, estilos: info.map((_, i) => (i === 0 ? [6, 0] : [5, 7]))},
+    ]);
+    const nombre = ('Clientes sin movimiento ' + n + ' meses ' + AD.mesLargo(AD.mes()) + ' ' + (v || 'todas las VD')).replace(/\u00a0/g, ' ').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150) + '.xlsx';
+    let ok = false;
+    try { ok = await AD.xlsx.guardar(nombre, libro); } catch (e) { console.error(e); }
+    btn.removeAttribute('aria-busy');
+    document.querySelectorAll('#dl-error-inact').forEach((e) => { e.hidden = ok; });
+  }));
 })();
 </script>
 <script>
