@@ -222,6 +222,18 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
 .ad .ad-inact-bar input[type=search]{flex:1 1 14rem}
 .ad .ad-table tr.is-nuevo td:first-child{box-shadow:inset 3px 0 0 var(--color-warn)}
 .ad .ad-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;font-size:11px;font-weight:600;line-height:18px;color:var(--color-warn);border:1px solid color-mix(in srgb,var(--color-warn) 45%,transparent);white-space:nowrap}
+.ad .ad-pick-maestro tbody tr{cursor:pointer}
+.ad .ad-pick-maestro .ad-name{min-width:12rem}
+.ad .ad-table td.ad-nw{white-space:nowrap}
+.ad #ad-buscar-maestro{max-width:34rem}
+.ad .ad-sort{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit}
+.ad .ad-sort::after{content:"";width:0;height:0;border-inline:4px solid transparent;opacity:0}
+.ad th[aria-sort=ascending] .ad-sort::after{border-bottom:5px solid currentColor;opacity:.8}
+.ad th[aria-sort=descending] .ad-sort::after{border-top:5px solid currentColor;opacity:.8}
+.ad .ad-sort:focus-visible{outline:2px solid var(--color-fg);outline-offset:2px;border-radius:2px}
+.ad .ad-num .ad-sort{justify-content:flex-end}
+.ad .ad-muted{color:var(--color-fg-muted)}
+.ad .ad-det .ad-eyebrow + .ad-card-note{margin-top:0}
 .ad .ad-presets button.on{background:var(--color-fg);border-color:var(--color-fg);color:var(--color-bg);font-weight:600}
 .ad .ad-presets button:focus-visible{outline:2px solid var(--color-fg);outline-offset:1px}
 .ad .ad-estado{display:none}
@@ -514,6 +526,80 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
     <p class="ad-note" id="inact-vacio" hidden>Ningún cliente comercial cumple esta condición con los filtros elegidos.</p>
     <p class="ad-note"><span class="ad-tag" style="margin-left:0">nuevo</span> dejó de comprar justo en el plazo elegido: su última compra fue hace exactamente <span data-draw="in-n">—</span> meses.</p>
     <p class="ad-note" id="inact-nunca">Además, <b data-draw="in-nunca" data-source="descuentos clientes_mes">—</b> clientes tienen descuento vigente en el archivo ZDPE y no registran ninguna compra en la base comercial, que parte en <span data-draw="in-inicio" data-source="clientes_mes" data-field="mes">—</span>.</p>
+  </section>
+
+  <section class="ad-card" id="buscador">
+    <div class="ad-card-head">
+      <div>
+        <h2>Buscador de clientes comerciales</h2>
+        <p class="ad-card-note">Todos los clientes comerciales y su descuento por formato, hayan comprado o no. No usa los filtros de fecha ni de venta directa: el descuento es el del archivo ZDPE y las compras son las de la base comercial, de <span data-draw="mc-inicio" data-source="clientes_mes" data-field="mes">—</span> a <span data-draw="mc-fin" data-source="clientes_mes" data-field="mes">—</span>. Toca un cliente para ver su detalle.</p>
+      </div>
+      <div class="ad-dl">
+        <button type="button" class="ad-dl-btn" id="descargar-maestro" aria-describedby="dl-ayuda-maestro">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M2.5 11.5v2h11v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Descargar Excel
+        </button>
+        <span class="ad-dl-msg" id="dl-ayuda-maestro">Los clientes de la lista, con su descuento en cada formato</span>
+        <span class="ad-dl-msg ad-dl-err" id="dl-error-maestro" hidden role="status">No se pudo descargar en esta vista. Prueba abrir el dashboard en el navegador.</span>
+      </div>
+    </div>
+    <div class="ad-stats" id="maestro-resumen">
+      <div class="ad-stat"><span>Clientes comerciales</span><strong data-draw="mc-total" data-source="maestro_clientes" data-field="cliente_id">—</strong></div>
+      <div class="ad-stat"><span>Con descuento registrado</span><strong data-draw="mc-con-desc" data-source="maestro_clientes" data-field="descuento">—</strong></div>
+      <div class="ad-stat"><span>Con descuento y sin compras</span><strong data-draw="mc-sin-compras" data-source="maestro_clientes" data-field="ultima_compra">—</strong></div>
+      <div class="ad-stat"><span>Compran sin descuento registrado</span><strong data-draw="mc-sin-desc" data-source="maestro_clientes" data-field="descuento">—</strong></div>
+    </div>
+    <div class="ad-inact-bar">
+      <input type="search" id="ad-buscar-maestro" placeholder="Buscar cliente, código, formato o venta directa" aria-label="Buscar cliente comercial por nombre, código, formato o venta directa">
+      <label class="ad-field" for="ad-maestro-ver">Mostrar
+        <select id="ad-maestro-ver">
+          <option value="">Todos los clientes</option>
+          <option value="con">Con compras</option>
+          <option value="sin">Sin compras registradas</option>
+          <option value="sindesc">Sin descuento registrado</option>
+        </select>
+      </label>
+    </div>
+    <div class="ad-rev">
+      <div class="ad-scroll ad-tall">
+        <table class="ad-table ad-pick-maestro" data-source="maestro_clientes" data-row-key="cliente_id" aria-label="Clientes comerciales">
+          <thead><tr>
+            <th data-field="cliente" aria-sort="ascending"><button type="button" class="ad-sort" data-k="cliente">Cliente</button></th>
+            <th data-field="cliente_id" class="ad-sec"><button type="button" class="ad-sort" data-k="cliente_id">Código</button></th>
+            <th data-field="descuento" class="ad-num"><button type="button" class="ad-sort" data-k="descuento">Dcto.</button></th>
+            <th data-field="formatos" class="ad-num"><button type="button" class="ad-sort" data-k="formatos">Formatos</button></th>
+            <th data-field="ultima_compra"><button type="button" class="ad-sort" data-k="ultima_compra">Última compra</button></th>
+            <th data-field="kilos_12" class="ad-num"><button type="button" class="ad-sort" data-k="kilos_12">Kg 12 meses</button></th>
+          </tr></thead>
+          <tbody data-draw="maestro-body"></tbody>
+        </table>
+      </div>
+      <div class="ad-det" id="maestro-detalle" aria-live="polite">
+        <p class="ad-eyebrow">Cliente seleccionado</p>
+        <p class="ad-det-h" data-draw="mc-nombre" data-source="maestro_clientes" data-field="cliente">—</p>
+        <p class="ad-card-note">Código <span data-draw="mc-codigo" data-source="maestro_clientes" data-field="cliente_id">—</span> · <span data-draw="mc-estado" data-source="maestro_clientes" data-field="estado">—</span></p>
+        <div class="ad-desc">
+          <p class="ad-eyebrow">Descuento comercial por formato</p>
+          <p class="ad-desc-sum" id="mc-desc-con"><b class="ad-desc-big" data-draw="mc-desc-pct" data-source="maestro_clientes" data-field="descuento">—</b> de descuento en <b data-draw="mc-desc-n" data-source="maestro_clientes" data-field="formatos">—</b> <span id="mc-desc-uno" hidden>formato</span><span id="mc-desc-varios">formatos</span>, vigente hasta el <b data-draw="mc-desc-hasta" data-source="maestro_clientes" data-field="vigente_hasta">—</b>.</p>
+          <p class="ad-none" id="mc-sin-desc" hidden>Este cliente no tiene descuento registrado en el archivo de descuentos ZDPE.</p>
+          <div class="ad-fmts" data-draw="mc-desc" data-source="descuentos"></div>
+        </div>
+        <p class="ad-eyebrow">Compras como cliente comercial</p>
+        <p class="ad-card-note" id="mc-compras-con">Última compra en <b data-draw="mc-ultima" data-source="maestro_clientes" data-field="ultima_compra">—</b>. En los 12 meses de <span data-draw="mc-periodo" data-source="clientes_mes" data-field="mes">—</span> compró <b data-draw="mc-k12" data-source="maestro_clientes" data-field="kilos_12">—</b> kg; en toda la base, <b data-draw="mc-ktot" data-source="maestro_clientes" data-field="kilos_total">—</b> kg.</p>
+        <p class="ad-none" id="mc-compras-sin" hidden>No registra compras como cliente comercial en la base, que va de <span data-draw="mc-inicio" data-source="clientes_mes" data-field="mes">—</span> a <span data-draw="mc-fin" data-source="clientes_mes" data-field="mes">—</span>.</p>
+        <div class="ad-scroll" id="mc-vd-box">
+          <table class="ad-table" data-source="maestro_vd" data-row-key="cliente_id,vendedor" aria-label="Ventas directas que le vendieron">
+            <thead><tr>
+              <th data-field="vendedor">Venta directa</th>
+              <th data-field="kilos_12" class="ad-num">Kg 12 meses</th>
+              <th data-field="kilos_total" class="ad-num">Kg en toda la base</th>
+              <th data-field="ultima_compra">Última compra</th>
+            </tr></thead>
+            <tbody data-draw="mc-vd-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </section>
 
 
@@ -2041,6 +2127,281 @@ dash.calc('inactividad', {
     try { ok = await AD.xlsx.guardar(nombre, libro); } catch (e) { console.error(e); }
     btn.removeAttribute('aria-busy');
     document.querySelectorAll('#dl-error-inact').forEach((e) => { e.hidden = ok; });
+  }));
+})();
+</script>
+<script>
+// ---------- Buscador de clientes comerciales ----------
+dash.calc('maestro_clientes', {
+  title: 'Clientes comerciales y su descuento',
+  description: 'Todos los clientes comerciales, estén en el archivo de descuentos o en la base de compras, sin importar el período: su descuento por formato, su última compra y sus kilos.',
+  inputs: ['descuentos', 'clientes_mes'],
+  fn: (descuentos, clientes_mes) => {
+    const idx = (m) => Number(m.slice(0, 4)) * 12 + Number(m.slice(5, 7)) - 1;
+    const meses = [...new Set(clientes_mes.map((r) => r.mes))].sort(), fin = idx(meses[meses.length - 1]);
+    const C = new Map();
+    const get = (id, nombre) => {
+      let c = C.get(id);
+      if (!c) { c = {cliente_id: id, nombre_desc: '', nombre_base: '', ds: [], kilos_12: 0, kilos_total: 0, ultima: null, vds: new Map()}; C.set(id, c); }
+      return c;
+    };
+    descuentos.forEach((x) => {
+      const c = get(String(x.cliente_id));
+      c.nombre_desc = c.nombre_desc || x.cliente;
+      if (Number(x.descuento) > 0) c.ds.push(x);
+    });
+    clientes_mes.forEach((r) => {
+      const k = Number(r.kilos);
+      if (!(k > 0)) return;
+      const c = get(String(r.cliente_id));
+      c.nombre_base = c.nombre_base || r.cliente;
+      c.kilos_total += k;
+      if (fin - idx(r.mes) < 12) c.kilos_12 += k;
+      if (!c.ultima || r.mes > c.ultima) c.ultima = r.mes;
+      c.vds.set(r.vendedor, (c.vds.get(r.vendedor) || 0) + k);
+    });
+    return [...C.values()].map((c) => {
+      const ds = c.ds.slice().sort((a, b) => a.orden - b.orden), v = ds.map((x) => Number(x.descuento));
+      return {
+        cliente_id: c.cliente_id, cliente: c.nombre_base || c.nombre_desc,
+        estado: c.ultima ? 'Con compras' : 'Sin compras registradas',
+        descuento: v.length ? Math.max(...v) : null, descuento_min: v.length ? Math.min(...v) : null, formatos: ds.length,
+        materiales: ds.map((x) => x.material).join(' · '), formatos_txt: ds.map((x) => x.formato).join(' · '),
+        vigente_hasta: ds.length ? ds.map((x) => x.valido_hasta).sort().pop() : null,
+        ultima_compra: c.ultima, kilos_12: c.ultima ? c.kilos_12 : null, kilos_total: c.ultima ? c.kilos_total : null,
+        ventas_directas: [...c.vds.entries()].sort((a, b) => b[1] - a[1]).map((e) => e[0]).join(' · '),
+      };
+    });
+  },
+});
+dash.calc('maestro_vd', {
+  title: 'Ventas directas de cada cliente',
+  description: 'Para cada cliente comercial y cada venta directa que le vendió, sin importar el período: kilos de los últimos 12 meses de la base, kilos de toda la base y mes de la última compra.',
+  inputs: ['clientes_mes'],
+  fn: (clientes_mes) => {
+    const idx = (m) => Number(m.slice(0, 4)) * 12 + Number(m.slice(5, 7)) - 1;
+    const fin = Math.max(...clientes_mes.map((r) => idx(r.mes)));
+    const M = new Map();
+    clientes_mes.forEach((r) => {
+      const k = Number(r.kilos);
+      if (!(k > 0)) return;
+      const key = r.cliente_id + '|' + r.vendedor;
+      const o = M.get(key) || {cliente_id: String(r.cliente_id), vendedor: r.vendedor, kilos_12: 0, kilos_total: 0, ultima_compra: r.mes};
+      o.kilos_total += k;
+      if (fin - idx(r.mes) < 12) o.kilos_12 += k;
+      if (r.mes > o.ultima_compra) o.ultima_compra = r.mes;
+      M.set(key, o);
+    });
+    return [...M.values()];
+  },
+});
+
+(() => {
+  const NEC = ['maestro_clientes', 'descuentos', 'clientes_mes'];
+  const st = {q: '', ver: '', k: 'cliente', dir: 1, sel: null};
+  const mesTxt = (m) => (m ? AD.MC[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(0, 4) : '—');
+  const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const celda = (tr, cls, txt) => { const td = mk('td', cls, txt); tr.appendChild(td); return td; };
+  const meses = () => [...new Set(AD.rows('clientes_mes').map((r) => r.mes))].sort();
+
+  const lista = () => {
+    const q = st.q.trim().toLowerCase();
+    const rs = AD.rows('maestro_clientes').filter((r) => {
+      if (st.ver === 'con' && !r.ultima_compra) return false;
+      if (st.ver === 'sin' && r.ultima_compra) return false;
+      if (st.ver === 'sindesc' && r.descuento > 0) return false;
+      return !q || (r.cliente + ' ' + r.cliente_id + ' ' + r.materiales + ' ' + r.formatos_txt + ' ' + r.ventas_directas).toLowerCase().includes(q);
+    });
+    const k = st.k, d = st.dir;
+    return rs.sort((a, b) => {
+      const x = a[k], y = b[k];
+      if (x == null || x === '') return y == null || y === '' ? a.cliente.localeCompare(b.cliente, 'es') : 1;
+      if (y == null || y === '') return -1;
+      const c = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'es', {numeric: true});
+      return (c || a.cliente.localeCompare(b.cliente, 'es')) * (c ? d : 1);
+    });
+  };
+  const sel = () => {
+    const rs = AD.rows('maestro_clientes');
+    return rs.find((r) => r.cliente_id === st.sel) || lista()[0] || null;
+  };
+  const DET = ['mc-nombre', 'mc-codigo', 'mc-estado', 'mc-desc', 'mc-desc-pct', 'mc-desc-n', 'mc-desc-hasta', 'mc-ultima', 'mc-k12', 'mc-ktot', 'mc-vd-body', 'mc-inicio', 'mc-fin', 'mc-periodo'];
+  const redibujar = (todo) => { if (todo) dash.draw('maestro-body'); DET.forEach((n) => dash.draw(n)); };
+
+  // Qué bloques del detalle se ven, según el cliente elegido.
+  const estado = () => {
+    const ok = AD.ok(...NEC), c = ok ? sel() : null, n = c ? c.formatos : 0;
+    const show = (id, v) => document.querySelectorAll(id).forEach((e) => { e.hidden = !v; });
+    show('#mc-desc-con', !ok || n > 0);
+    show('#mc-sin-desc', ok && c && n === 0);
+    show('#mc-desc-uno', n === 1);
+    show('#mc-desc-varios', n !== 1);
+    show('#mc-compras-con', !ok || (c && c.ultima_compra));
+    show('#mc-compras-sin', ok && c && !c.ultima_compra);
+    show('#mc-vd-box', !ok || (c && c.ultima_compra));
+  };
+  dash.onData(estado);
+
+  dash.draw('maestro-body', (tb) => {
+    estado();
+    if (AD.wait(tb, NEC, true)) return;
+    const c = sel();
+    document.querySelectorAll('.ad-pick-maestro th[data-field]').forEach((th) => {
+      const b = th.querySelector('.ad-sort');
+      if (b && b.dataset.k === st.k) th.setAttribute('aria-sort', st.dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+    });
+    tb.replaceChildren(...lista().map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = AD.enc(r.cliente_id);
+      tr.tabIndex = 0;
+      if (c && r.cliente_id === c.cliente_id) tr.className = 'is-sel';
+      celda(tr, 'ad-name', r.cliente);
+      celda(tr, 'ad-sec', r.cliente_id);
+      celda(tr, 'ad-num', AD.descTxt(r));
+      celda(tr, 'ad-num', r.formatos ? AD.n0(r.formatos) : '—');
+      celda(tr, r.ultima_compra ? 'ad-nw' : 'ad-nw ad-muted', r.ultima_compra ? mesTxt(r.ultima_compra) : 'Sin compras');
+      celda(tr, 'ad-num', r.ultima_compra ? AD.n0(r.kilos_12) : '—');
+      return tr;
+    }));
+  });
+
+  const txt = (name, f) => dash.draw(name, (el) => {
+    if (AD.wait(el, NEC)) return;
+    const c = sel();
+    if (!c) { el.textContent = '—'; return; }
+    el.dataset.where = AD.where({cliente_id: c.cliente_id});
+    el.textContent = f(c);
+  });
+  txt('mc-nombre', (c) => { estado(); return c.cliente; });
+  txt('mc-codigo', (c) => c.cliente_id);
+  txt('mc-estado', (c) => c.estado);
+  txt('mc-desc-pct', (c) => AD.descTxt(c));
+  txt('mc-desc-n', (c) => AD.n0(c.formatos));
+  txt('mc-desc-hasta', (c) => AD.fecha(c.vigente_hasta));
+  txt('mc-ultima', (c) => (c.ultima_compra ? AD.mesLargo(c.ultima_compra) : '—'));
+  txt('mc-k12', (c) => AD.n0(c.kilos_12));
+  txt('mc-ktot', (c) => AD.n0(c.kilos_total));
+
+  dash.draw('mc-desc', (box) => {
+    if (AD.wait(box, NEC, true)) return;
+    const c = sel();
+    if (!c) { box.replaceChildren(); return; }
+    box.dataset.where = AD.where({cliente_id: c.cliente_id});
+    const ds = AD.rows('descuentos').filter((x) => String(x.cliente_id) === c.cliente_id && Number(x.descuento) > 0).sort((a, b) => a.orden - b.orden);
+    const dist = new Set(ds.map((x) => x.valido_desde)).size > 1;
+    box.replaceChildren(...ds.map((x) => {
+      const t = mk('div', 'ad-fmt');
+      t.title = x.material + ' · ' + x.formato + ': ' + AD.pct(x.descuento, 0) + ' de descuento, vigente del ' + AD.fecha(x.valido_desde) + ' al ' + AD.fecha(x.valido_hasta);
+      t.append(mk('span', 'ad-fmt-pct', AD.pct(x.descuento, 0)), mk('span', 'ad-fmt-kg', x.formato), mk('span', 'ad-fmt-cod', x.material));
+      if (dist) { const s = mk('span', 'ad-fmt-cod'), b = mk('b', '', AD.fecha(x.valido_desde)); s.append('desde ', b); t.appendChild(s); }
+      return t;
+    }));
+  });
+  dash.draw('mc-vd-body', (tb) => {
+    if (AD.wait(tb, ['maestro_vd', ...NEC], true)) return;
+    const c = sel();
+    const rs = c ? AD.rows('maestro_vd').filter((r) => r.cliente_id === c.cliente_id).sort((a, b) => b.kilos_12 - a.kilos_12 || b.kilos_total - a.kilos_total) : [];
+    tb.replaceChildren(...rs.map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = AD.enc(r.cliente_id) + ',' + AD.enc(r.vendedor);
+      celda(tr, 'ad-name', r.vendedor);
+      celda(tr, 'ad-num', AD.n0(r.kilos_12));
+      celda(tr, 'ad-num', AD.n0(r.kilos_total));
+      celda(tr, 'ad-nw', mesTxt(r.ultima_compra));
+      return tr;
+    }));
+  });
+
+  // Resumen
+  const stat = (name, f) => dash.draw(name, (el) => {
+    if (AD.wait(el, NEC)) return;
+    el.textContent = AD.n0(AD.rows('maestro_clientes').filter(f).length);
+  });
+  stat('mc-total', () => true);
+  stat('mc-con-desc', (r) => r.descuento > 0);
+  stat('mc-sin-compras', (r) => r.descuento > 0 && !r.ultima_compra);
+  stat('mc-sin-desc', (r) => !(r.descuento > 0) && r.ultima_compra);
+  const mesDraw = (name, f) => dash.draw(name, (el) => {
+    if (AD.wait(el, ['clientes_mes'])) return;
+    const ms = meses(), m = f(ms);
+    el.dataset.where = AD.where({mes: m});
+    el.textContent = name === 'mc-periodo' ? mesTxt(m) + ' a ' + mesTxt(ms[ms.length - 1]) : AD.mesLargo(m);
+  });
+  mesDraw('mc-inicio', (ms) => ms[0]);
+  mesDraw('mc-fin', (ms) => ms[ms.length - 1]);
+  mesDraw('mc-periodo', (ms) => ms[Math.max(0, ms.length - 12)]);
+
+  // Controles
+  document.querySelectorAll('#ad-buscar-maestro').forEach((i) => i.addEventListener('input', () => { st.q = i.value; redibujar(true); }));
+  document.querySelectorAll('#ad-maestro-ver').forEach((s) => s.addEventListener('change', () => { st.ver = s.value; redibujar(true); }));
+  document.querySelectorAll('.ad-pick-maestro .ad-sort').forEach((b) => b.addEventListener('click', () => {
+    const k = b.dataset.k;
+    if (st.k === k) st.dir = -st.dir; else { st.k = k; st.dir = ['descuento', 'formatos', 'kilos_12', 'ultima_compra'].includes(k) ? -1 : 1; }
+    dash.draw('maestro-body');
+  }));
+  const elegir = (e) => {
+    const tr = e.target.closest('tbody tr[data-key]');
+    if (!tr) return;
+    st.sel = decodeURIComponent(tr.dataset.key);
+    redibujar(true);
+    document.querySelectorAll('#maestro-detalle').forEach((d) => {
+      const r = d.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight - 80) d.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  };
+  document.querySelectorAll('.ad-pick-maestro').forEach((t) => {
+    t.addEventListener('click', elegir);
+    t.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.closest('tbody')) elegir(e); });
+  });
+
+  // Descarga en Excel: un cliente por fila y una columna por formato.
+  document.querySelectorAll('#descargar-maestro').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!AD.xlsx || btn.getAttribute('aria-busy') === 'true' || !AD.ok(...NEC)) return;
+    btn.setAttribute('aria-busy', 'true');
+    document.querySelectorAll('#dl-error-maestro').forEach((e) => { e.hidden = true; });
+    const rs = lista(), ids = new Set(rs.map((r) => r.cliente_id));
+    const D = new Map(), mats = new Map();
+    AD.rows('descuentos').forEach((x) => {
+      const id = String(x.cliente_id);
+      if (!ids.has(id) || !(Number(x.descuento) > 0)) return;
+      if (!D.has(id)) D.set(id, new Map());
+      D.get(id).set(x.material, Number(x.descuento));
+      if (!mats.has(x.material)) mats.set(x.material, {orden: x.orden, formato: x.formato});
+    });
+    const fm = [...mats.entries()].sort((a, b) => a[1].orden - b[1].orden);
+    const pctFrac = (x) => (x == null ? null : Math.round(x * 10000) / 10000);
+    const columnas = [
+      {titulo: 'Cliente', ancho: 42}, {titulo: 'Código', ancho: 12}, {titulo: 'Estado', ancho: 20},
+      {titulo: 'Descuento mínimo', ancho: 12, estilo: 4}, {titulo: 'Descuento máximo', ancho: 12, estilo: 4}, {titulo: 'Formatos con descuento', ancho: 12, estilo: 2},
+      ...fm.map(([m, f]) => ({titulo: m + ' (' + f.formato + ')', ancho: 12, estilo: 4})),
+      {titulo: 'Vigente hasta', ancho: 13}, {titulo: 'Última compra', ancho: 14},
+      {titulo: 'Kg últimos 12 meses', ancho: 14, estilo: 2}, {titulo: 'Kg en toda la base', ancho: 14, estilo: 2}, {titulo: 'Ventas directas que le vendieron', ancho: 50},
+    ];
+    const filas = rs.map((r) => [r.cliente, Number(r.cliente_id) || r.cliente_id, r.estado,
+      r.descuento > 0 ? pctFrac(r.descuento_min) : null, r.descuento > 0 ? pctFrac(r.descuento) : null, r.formatos || null,
+      ...fm.map(([m]) => pctFrac((D.get(r.cliente_id) || new Map()).get(m))),
+      r.vigente_hasta ? AD.fecha(r.vigente_hasta) : '', r.ultima_compra ? mesTxt(r.ultima_compra) : 'Sin compras',
+      r.ultima_compra ? r.kilos_12 : null, r.ultima_compra ? r.kilos_total : null, r.ventas_directas]);
+    const ms = meses(), ahora = new Date(), dd = (x) => String(x).padStart(2, '0');
+    const verTxt = {'': 'Todos los clientes', con: 'Con compras', sin: 'Sin compras registradas', sindesc: 'Sin descuento registrado'}[st.ver];
+    const info = [
+      ['Alertas de descuento comercial · Gasco', ''], ['', ''],
+      ['Tabla', 'Buscador de clientes comerciales'],
+      ['Mostrar', verTxt + (st.q.trim() ? ' · búsqueda: «' + st.q.trim() + '»' : '')],
+      ['Descuento', 'Descuento comercial ZDPE de cada cliente en cada formato (archivo de descuentos).'],
+      ['Compras', 'Base comercial de ' + AD.mesLargo(ms[0]) + ' a ' + AD.mesLargo(ms[ms.length - 1]) + '; «Kg últimos 12 meses» va de ' + mesTxt(ms[Math.max(0, ms.length - 12)]) + ' a ' + mesTxt(ms[ms.length - 1]) + '.'],
+      ['Clientes', rs.length],
+      ['Descargado', dd(ahora.getDate()) + '-' + dd(ahora.getMonth() + 1) + '-' + ahora.getFullYear() + ' ' + dd(ahora.getHours()) + ':' + dd(ahora.getMinutes())],
+    ];
+    const libro = AD.xlsx.libro([
+      {nombre: 'Clientes y descuentos', columnas, filas, tabla: true},
+      {nombre: 'Información', columnas: [{titulo: '', ancho: 16}, {titulo: '', ancho: 90}], filas: info, tabla: false, estilos: info.map((_, i) => (i === 0 ? [6, 0] : [5, 7]))},
+    ]);
+    const nombre = ('Clientes comerciales y descuentos ' + (st.ver ? verTxt.toLowerCase() : '') + ' ' + dd(ahora.getDate()) + '-' + dd(ahora.getMonth() + 1) + '-' + ahora.getFullYear()).replace(/\s+/g, ' ').trim() + '.xlsx';
+    let ok = false;
+    try { ok = await AD.xlsx.guardar(nombre, libro); } catch (e) { console.error(e); }
+    btn.removeAttribute('aria-busy');
+    document.querySelectorAll('#dl-error-maestro').forEach((e) => { e.hidden = ok; });
   }));
 })();
 </script>
