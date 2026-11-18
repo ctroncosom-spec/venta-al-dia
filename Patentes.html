@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Patentes Venta Directa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  /* Tokens que en el dashboard pone la plataforma; aquí van fijos, con modo claro y oscuro */
+  :root {
+    --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-anthropic-serif: Georgia, "Times New Roman", serif;
+    --color-bg: #f6f7f9;
+    --color-panel: #ffffff;
+    --color-fg: #1d2330;
+    --color-fg-muted: #5d6676;
+    --color-border-line: #dfe3ea;
+    --color-ok: #1f7a4d;
+    --color-warn: #a35f00;
+    --color-bad: #c0352b;
+    --series-1: #2f6fd6; --series-2: #e07b39; --series-3: #2a9d8f; --series-4: #8e5bd0; --series-5: #d4a017;
+    --series-6: #c94f7c; --series-7: #5a8f29; --series-8: #6b7280;
+    --cds-font-size-caption: 0.78rem;
+    --cds-font-size-body: 0.9rem;
+    --cds-font-size-heading: 1.02rem;
+    --cds-font-size-title: 1.65rem;
+    --cds-font-weight-medium: 600;
+    --cds-gap-xs: 0.25rem; --cds-gap-sm: 0.5rem; --cds-gap-md: 0.9rem; --cds-gap-lg: 1.4rem; --cds-gap-xl: 2rem;
+    --cds-pad-xs: 0.3rem; --cds-pad-sm: 0.55rem; --cds-pad-md: 0.8rem; --cds-pad-lg: 1.1rem; --cds-pad-xl: 1.6rem;
+    --cds-radius: 8px;
+    --cds-chart-muted: #9aa4b5;
+    --cds-chart-status-critical: #d2453a;
+    --cds-chart-grid: #e9ecf1;
+    --cds-chart-axis: #b7bfcc;
+    --cds-chart-reference: #4b5563;
+    --cds-surface-popover: #ffffff;
+    --cds-border: #d5dae3;
+    --cds-shadow-popover: 0 6px 20px rgba(20, 30, 50, 0.14);
+    --cds-text-secondary: #5d6676;
+    --cds-dur-slow: 300ms;
+    --cds-ease-out: cubic-bezier(.2, .8, .2, 1);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #12151b;
+      --color-panel: #1a1f27;
+      --color-fg: #e8ebf0;
+      --color-fg-muted: #a1a9b6;
+      --color-border-line: #2c333e;
+      --color-ok: #5cc28f;
+      --color-warn: #e0a24a;
+      --color-bad: #ff7468;
+      --series-1: #6aa0ff; --series-2: #f29a5c; --series-3: #4cc2b3; --series-4: #b18cf0; --series-5: #e9c046;
+      --series-6: #ea7aa3; --series-7: #8cc35a; --series-8: #9aa3b2;
+      --cds-chart-muted: #6c7686;
+      --cds-chart-status-critical: #ff6b5f;
+      --cds-chart-grid: #262c36;
+      --cds-chart-axis: #4a5260;
+      --cds-chart-reference: #c3cad5;
+      --cds-surface-popover: #222833;
+      --cds-border: #353d4a;
+      --cds-shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.45);
+      --cds-text-secondary: #a1a9b6;
+      color-scheme: dark;
+    }
+  }
+  html, body { margin: 0; }
+  body { background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); line-height: 1.45; }
+  .pagina { max-width: 1240px; margin: 0 auto; padding-block: 1.5rem 2.5rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 1.2rem; }
+  .pie { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; }
+  .dash-skeleton { color: transparent !important; }
+  .vd-chart.dash-skeleton { background: var(--cds-chart-grid); border-radius: var(--cds-radius); }
+  .vd-sw { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+  .vd-table tr.is-bajo td.vd-plate { color: var(--color-bad); }
+  .vx .vx-mixtable td.vx-fmt { white-space: normal; }
+  @media (max-width: 30rem) { .vx .vx-mixtable th, .vx .vx-mixtable td { padding-left: 0.3rem; padding-right: 0.3rem; } }
+</style>
+<script>window.__DATOS__ = {"diario":[{"fecha":"2026-10-01","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":311},{"fecha":"2026-10-01","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":467},{"fecha":"2026-10-01","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":290},{"fecha":"2026-10-01","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":780},{"fecha":"2026-10-01","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":837},{"fecha":"2026-10-01","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":1,"kg":173},{"fecha":"2026-10-01","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":364},{"fecha":"2026-10-01","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":548},{"fecha":"2026-10-01","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":135},{"fecha":"2026-10-01","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":1,"kg":26},{"fecha":"2026-10-01","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":296},{"fecha":"2026-10-01","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":530},{"fecha":"2026-10-01","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":301},{"fecha":"2026-10-01","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","documentos":2,"kg":195},{"fecha":"2026-10-01","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":590},{"fecha":"2026-10-01","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":413},{"fecha":"2026-10-01","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":503},{"fecha":"2026-10-01","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":661},{"fecha":"2026-10-01","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":1,"kg":375},{"fecha":"2026-10-01","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":1,"kg":400},{"fecha":"2026-10-01","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":116},{"fecha":"2026-10-01","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":1,"kg":682},{"fecha":"2026-10-01","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":371},{"fecha":"2026-10-01","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":2,"kg":318},{"fecha":"2026-10-01","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":262},{"fecha":"2026-10-01","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":1,"kg":390},{"fecha":"2026-10-01","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":328},{"fecha":"2026-10-01","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":90},{"fecha":"2026-10-01","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":151},{"fecha":"2026-10-02","sap":"12452151","venta_directa":"TOMAS ORTUZAR","comuna":"Rancagua","patente":"VBKX93","documentos":2,"kg":940},{"fecha":"2026-10-02","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":2,"kg":232},{"fecha":"2026-10-02","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":569},{"fecha":"2026-10-02","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":580},{"fecha":"2026-10-03","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":536},{"fecha":"2026-10-03","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":782},{"fecha":"2026-10-03","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":247},{"fecha":"2026-10-03","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":499},{"fecha":"2026-10-03","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":768},{"fecha":"2026-10-03","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":647},{"fecha":"2026-10-03","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":690},{"fecha":"2026-10-03","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":110},{"fecha":"2026-10-03","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":1,"kg":413},{"fecha":"2026-10-03","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":634},{"fecha":"2026-10-03","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":533},{"fecha":"2026-10-03","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"HHZJ57","documentos":2,"kg":150},{"fecha":"2026-10-03","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":689},{"fecha":"2026-10-03","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":225},{"fecha":"2026-10-03","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":2,"kg":372},{"fecha":"2026-10-03","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":553},{"fecha":"2026-10-03","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":577},{"fecha":"2026-10-05","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":198},{"fecha":"2026-10-05","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":270},{"fecha":"2026-10-05","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":557},{"fecha":"2026-10-05","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":314},{"fecha":"2026-10-05","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":1,"kg":136},{"fecha":"2026-10-05","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":315},{"fecha":"2026-10-05","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":417},{"fecha":"2026-10-05","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":563},{"fecha":"2026-10-05","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":508},{"fecha":"2026-10-05","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":597},{"fecha":"2026-10-05","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":240},{"fecha":"2026-10-05","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":2,"kg":417},{"fecha":"2026-10-05","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":131},{"fecha":"2026-10-05","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":644},{"fecha":"2026-10-05","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":1,"kg":258},{"fecha":"2026-10-05","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":438},{"fecha":"2026-10-05","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":2,"kg":91},{"fecha":"2026-10-05","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":162},{"fecha":"2026-10-06","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":1,"kg":240},{"fecha":"2026-10-06","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1369},{"fecha":"2026-10-06","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":402},{"fecha":"2026-10-06","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":738},{"fecha":"2026-10-06","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":855},{"fecha":"2026-10-06","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":577},{"fecha":"2026-10-06","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":2,"kg":435},{"fecha":"2026-10-06","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":507},{"fecha":"2026-10-06","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":578},{"fecha":"2026-10-06","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":2,"kg":253},{"fecha":"2026-10-06","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":395},{"fecha":"2026-10-06","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":416},{"fecha":"2026-10-07","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":248},{"fecha":"2026-10-07","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":419},{"fecha":"2026-10-07","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":525},{"fecha":"2026-10-07","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","documentos":2,"kg":835},{"fecha":"2026-10-07","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":290},{"fecha":"2026-10-07","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":487},{"fecha":"2026-10-07","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":292},{"fecha":"2026-10-07","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":393},{"fecha":"2026-10-07","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":656},{"fecha":"2026-10-07","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"HHZJ57","documentos":2,"kg":213},{"fecha":"2026-10-07","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":633},{"fecha":"2026-10-07","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":2,"kg":230},{"fecha":"2026-10-07","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":157},{"fecha":"2026-10-07","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":1,"kg":241},{"fecha":"2026-10-07","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":2,"kg":278},{"fecha":"2026-10-08","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":271},{"fecha":"2026-10-08","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":492},{"fecha":"2026-10-08","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1174},{"fecha":"2026-10-08","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":449},{"fecha":"2026-10-08","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":525},{"fecha":"2026-10-08","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":395},{"fecha":"2026-10-08","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":812},{"fecha":"2026-10-08","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":537},{"fecha":"2026-10-08","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":348},{"fecha":"2026-10-08","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":816},{"fecha":"2026-10-08","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":330},{"fecha":"2026-10-08","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":336},{"fecha":"2026-10-08","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":146},{"fecha":"2026-10-08","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":140},{"fecha":"2026-10-08","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":1,"kg":30},{"fecha":"2026-10-09","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":160},{"fecha":"2026-10-09","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":191},{"fecha":"2026-10-09","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":465},{"fecha":"2026-10-09","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":386},{"fecha":"2026-10-09","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":2,"kg":288},{"fecha":"2026-10-09","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":420},{"fecha":"2026-10-09","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":1,"kg":410},{"fecha":"2026-10-09","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":1,"kg":296},{"fecha":"2026-10-09","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":251},{"fecha":"2026-10-09","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":1,"kg":105},{"fecha":"2026-10-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":155},{"fecha":"2026-10-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":632},{"fecha":"2026-10-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":381},{"fecha":"2026-10-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":935},{"fecha":"2026-10-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":228},{"fecha":"2026-10-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":593},{"fecha":"2026-10-10","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":277},{"fecha":"2026-10-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":228},{"fecha":"2026-10-10","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","documentos":2,"kg":422},{"fecha":"2026-10-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":367},{"fecha":"2026-10-10","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":561},{"fecha":"2026-10-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":461},{"fecha":"2026-10-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":590},{"fecha":"2026-10-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":196},{"fecha":"2026-10-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":650},{"fecha":"2026-10-10","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":3,"kg":401},{"fecha":"2026-10-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":2,"kg":225},{"fecha":"2026-10-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":709},{"fecha":"2026-10-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":508},{"fecha":"2026-10-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":15},{"fecha":"2026-10-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":30},{"fecha":"2026-10-13","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":600},{"fecha":"2026-10-13","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":531},{"fecha":"2026-10-13","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":742},{"fecha":"2026-10-13","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":1,"kg":191},{"fecha":"2026-10-13","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":2,"kg":494},{"fecha":"2026-10-13","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":337},{"fecha":"2026-10-13","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":651},{"fecha":"2026-10-13","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":265},{"fecha":"2026-10-13","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":753},{"fecha":"2026-10-13","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":387},{"fecha":"2026-10-13","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":643},{"fecha":"2026-10-13","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":1,"kg":300},{"fecha":"2026-10-13","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":2,"kg":288},{"fecha":"2026-10-13","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":75},{"fecha":"2026-10-13","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":637},{"fecha":"2026-10-13","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":292},{"fecha":"2026-10-13","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":1,"kg":210},{"fecha":"2026-10-13","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":495},{"fecha":"2026-10-13","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":545},{"fecha":"2026-10-13","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":476},{"fecha":"2026-10-13","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":2,"kg":90},{"fecha":"2026-10-13","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":1,"kg":162},{"fecha":"2026-10-14","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":101},{"fecha":"2026-10-14","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":206},{"fecha":"2026-10-14","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":498},{"fecha":"2026-10-14","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":297},{"fecha":"2026-10-14","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1127},{"fecha":"2026-10-14","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":436},{"fecha":"2026-10-14","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":187},{"fecha":"2026-10-14","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":494},{"fecha":"2026-10-14","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":60},{"fecha":"2026-10-14","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":630},{"fecha":"2026-10-14","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":632},{"fecha":"2026-10-15","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":1002},{"fecha":"2026-10-15","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","documentos":2,"kg":739},{"fecha":"2026-10-15","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":385},{"fecha":"2026-10-15","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":435},{"fecha":"2026-10-15","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":541},{"fecha":"2026-10-15","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":534},{"fecha":"2026-10-15","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":435},{"fecha":"2026-10-15","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":135},{"fecha":"2026-10-15","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":86},{"fecha":"2026-10-15","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":447},{"fecha":"2026-10-15","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":150},{"fecha":"2026-10-15","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":116},{"fecha":"2026-10-15","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":112},{"fecha":"2026-10-16","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":697},{"fecha":"2026-10-16","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":702},{"fecha":"2026-10-16","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":286},{"fecha":"2026-10-16","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":517},{"fecha":"2026-10-16","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":105},{"fecha":"2026-10-16","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":1,"kg":345},{"fecha":"2026-10-16","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":457},{"fecha":"2026-10-16","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":331},{"fecha":"2026-10-16","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":2,"kg":237},{"fecha":"2026-10-16","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":333},{"fecha":"2026-10-16","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":255},{"fecha":"2026-10-17","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":311},{"fecha":"2026-10-17","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":195},{"fecha":"2026-10-17","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":245},{"fecha":"2026-10-17","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":384},{"fecha":"2026-10-17","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":596},{"fecha":"2026-10-17","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":746},{"fecha":"2026-10-17","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":290},{"fecha":"2026-10-17","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":1,"kg":780},{"fecha":"2026-10-17","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":410},{"fecha":"2026-10-17","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":677},{"fecha":"2026-10-17","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":421},{"fecha":"2026-10-17","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":461},{"fecha":"2026-10-17","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":386},{"fecha":"2026-10-17","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":165},{"fecha":"2026-10-17","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":402},{"fecha":"2026-10-17","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":196},{"fecha":"2026-10-17","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":540},{"fecha":"2026-10-19","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1304},{"fecha":"2026-10-19","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":374},{"fecha":"2026-10-19","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":597},{"fecha":"2026-10-19","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":539},{"fecha":"2026-10-19","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":210},{"fecha":"2026-10-19","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":521},{"fecha":"2026-10-19","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":355},{"fecha":"2026-10-19","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":588},{"fecha":"2026-10-19","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":583},{"fecha":"2026-10-19","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":1,"kg":367},{"fecha":"2026-10-19","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":146},{"fecha":"2026-10-19","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":583},{"fecha":"2026-10-19","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":536},{"fecha":"2026-10-19","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":505},{"fecha":"2026-10-19","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":45},{"fecha":"2026-10-19","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":225},{"fecha":"2026-10-20","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":160},{"fecha":"2026-10-20","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":361},{"fecha":"2026-10-20","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":255},{"fecha":"2026-10-20","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":581},{"fecha":"2026-10-20","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":433},{"fecha":"2026-10-20","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":2,"kg":329},{"fecha":"2026-10-20","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":301},{"fecha":"2026-10-20","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":338},{"fecha":"2026-10-20","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":507},{"fecha":"2026-10-20","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":1,"kg":591},{"fecha":"2026-10-20","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":1,"kg":363},{"fecha":"2026-10-20","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":209},{"fecha":"2026-10-20","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":243},{"fecha":"2026-10-21","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1085},{"fecha":"2026-10-21","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":307},{"fecha":"2026-10-21","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":436},{"fecha":"2026-10-21","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":502},{"fecha":"2026-10-21","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","documentos":2,"kg":183},{"fecha":"2026-10-21","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":577},{"fecha":"2026-10-21","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":574},{"fecha":"2026-10-21","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":1,"kg":532},{"fecha":"2026-10-21","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":480},{"fecha":"2026-10-21","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":435},{"fecha":"2026-10-21","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":1,"kg":447},{"fecha":"2026-10-21","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":1,"kg":90},{"fecha":"2026-10-21","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":585},{"fecha":"2026-10-21","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":475},{"fecha":"2026-10-21","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":560},{"fecha":"2026-10-22","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":403},{"fecha":"2026-10-22","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":675},{"fecha":"2026-10-22","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":1,"kg":228},{"fecha":"2026-10-22","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":1,"kg":285},{"fecha":"2026-10-22","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":365},{"fecha":"2026-10-22","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":293},{"fecha":"2026-10-22","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":720},{"fecha":"2026-10-22","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":237},{"fecha":"2026-10-22","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":420},{"fecha":"2026-10-22","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":195},{"fecha":"2026-10-23","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":221},{"fecha":"2026-10-23","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":436},{"fecha":"2026-10-23","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":1,"kg":567},{"fecha":"2026-10-23","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":537},{"fecha":"2026-10-23","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":614},{"fecha":"2026-10-23","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":1,"kg":170},{"fecha":"2026-10-23","sap":"12452151","venta_directa":"TOMAS ORTUZAR","comuna":"Rancagua","patente":"VBKX93","documentos":2,"kg":1112},{"fecha":"2026-10-23","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":228},{"fecha":"2026-10-23","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":251},{"fecha":"2026-10-23","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":536},{"fecha":"2026-10-23","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":599},{"fecha":"2026-10-23","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":3,"kg":588},{"fecha":"2026-10-23","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":1,"kg":45},{"fecha":"2026-10-23","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":170},{"fecha":"2026-10-23","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":1,"kg":538},{"fecha":"2026-10-23","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":371},{"fecha":"2026-10-24","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":136},{"fecha":"2026-10-24","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":558},{"fecha":"2026-10-24","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":392},{"fecha":"2026-10-24","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","documentos":2,"kg":401},{"fecha":"2026-10-24","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":387},{"fecha":"2026-10-24","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":430},{"fecha":"2026-10-24","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":304},{"fecha":"2026-10-24","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":332},{"fecha":"2026-10-24","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":1,"kg":330},{"fecha":"2026-10-24","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":1,"kg":270},{"fecha":"2026-10-24","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":960},{"fecha":"2026-10-24","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":1,"kg":86},{"fecha":"2026-10-26","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":1,"kg":120},{"fecha":"2026-10-26","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":707},{"fecha":"2026-10-26","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1177},{"fecha":"2026-10-26","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":283},{"fecha":"2026-10-26","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":618},{"fecha":"2026-10-26","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":785},{"fecha":"2026-10-26","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","documentos":2,"kg":895},{"fecha":"2026-10-26","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":1,"kg":300},{"fecha":"2026-10-26","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":570},{"fecha":"2026-10-26","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":385},{"fecha":"2026-10-26","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":773},{"fecha":"2026-10-26","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":307},{"fecha":"2026-10-26","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":1,"kg":215},{"fecha":"2026-10-26","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":80},{"fecha":"2026-10-26","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":1,"kg":180},{"fecha":"2026-10-26","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","documentos":2,"kg":569},{"fecha":"2026-10-26","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":180},{"fecha":"2026-10-26","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":566},{"fecha":"2026-10-26","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":381},{"fecha":"2026-10-27","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":296},{"fecha":"2026-10-27","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":1,"kg":479},{"fecha":"2026-10-27","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":244},{"fecha":"2026-10-27","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":1,"kg":1107},{"fecha":"2026-10-27","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":285},{"fecha":"2026-10-27","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":571},{"fecha":"2026-10-27","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":657},{"fecha":"2026-10-27","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":403},{"fecha":"2026-10-27","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":206},{"fecha":"2026-10-27","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":506},{"fecha":"2026-10-27","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":300},{"fecha":"2026-10-27","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":297},{"fecha":"2026-10-27","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":140},{"fecha":"2026-10-27","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":60},{"fecha":"2026-10-28","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":670},{"fecha":"2026-10-28","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":270},{"fecha":"2026-10-28","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":350},{"fecha":"2026-10-28","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":462},{"fecha":"2026-10-28","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":584},{"fecha":"2026-10-28","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":557},{"fecha":"2026-10-28","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":157},{"fecha":"2026-10-29","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":1,"kg":225},{"fecha":"2026-10-29","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":250},{"fecha":"2026-10-29","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":320},{"fecha":"2026-10-29","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":597},{"fecha":"2026-10-29","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":288},{"fecha":"2026-10-29","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":465},{"fecha":"2026-10-29","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":593},{"fecha":"2026-10-29","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":350},{"fecha":"2026-10-29","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":561},{"fecha":"2026-10-29","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","documentos":2,"kg":351},{"fecha":"2026-10-29","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":1,"kg":333},{"fecha":"2026-10-29","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":480},{"fecha":"2026-10-30","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":664},{"fecha":"2026-10-30","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":1,"kg":370},{"fecha":"2026-10-30","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1454},{"fecha":"2026-10-30","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":1,"kg":237},{"fecha":"2026-10-30","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":1,"kg":125},{"fecha":"2026-10-30","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":275},{"fecha":"2026-10-30","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":667},{"fecha":"2026-10-30","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":576},{"fecha":"2026-10-30","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","documentos":1,"kg":187},{"fecha":"2026-10-30","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":1,"kg":303},{"fecha":"2026-10-30","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":502},{"fecha":"2026-10-30","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":442},{"fecha":"2026-10-30","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":131},{"fecha":"2026-10-30","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":521},{"fecha":"2026-10-30","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":365},{"fecha":"2026-10-30","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":270},{"fecha":"2026-10-30","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":2,"kg":60},{"fecha":"2026-10-30","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":160},{"fecha":"2026-10-31","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":1,"kg":497},{"fecha":"2026-10-31","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":1,"kg":458},{"fecha":"2026-10-31","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":700},{"fecha":"2026-10-31","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":631},{"fecha":"2026-10-31","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":508},{"fecha":"2026-10-31","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":1,"kg":468},{"fecha":"2026-10-31","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":1,"kg":153},{"fecha":"2026-10-31","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":281},{"fecha":"2026-11-02","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":247},{"fecha":"2026-11-02","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":221},{"fecha":"2026-11-02","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":461},{"fecha":"2026-11-02","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":203},{"fecha":"2026-11-02","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":1,"kg":827},{"fecha":"2026-11-02","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":1,"kg":719},{"fecha":"2026-11-02","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":2,"kg":231},{"fecha":"2026-11-02","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":613},{"fecha":"2026-11-02","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":783},{"fecha":"2026-11-02","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":311},{"fecha":"2026-11-02","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":290},{"fecha":"2026-11-02","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":356},{"fecha":"2026-11-02","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":353},{"fecha":"2026-11-02","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","documentos":2,"kg":618},{"fecha":"2026-11-02","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","documentos":2,"kg":364},{"fecha":"2026-11-02","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":356},{"fecha":"2026-11-02","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":603},{"fecha":"2026-11-02","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":172},{"fecha":"2026-11-02","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":461},{"fecha":"2026-11-02","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":1,"kg":228},{"fecha":"2026-11-02","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":1,"kg":330},{"fecha":"2026-11-02","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":1,"kg":45},{"fecha":"2026-11-02","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":408},{"fecha":"2026-11-02","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":472},{"fecha":"2026-11-02","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":285},{"fecha":"2026-11-02","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":327},{"fecha":"2026-11-02","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":360},{"fecha":"2026-11-02","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":2,"kg":270},{"fecha":"2026-11-02","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":180},{"fecha":"2026-11-03","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":668},{"fecha":"2026-11-03","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":2,"kg":387},{"fecha":"2026-11-03","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":1,"kg":396},{"fecha":"2026-11-03","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":1,"kg":375},{"fecha":"2026-11-04","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":1,"kg":371},{"fecha":"2026-11-04","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":1,"kg":1386},{"fecha":"2026-11-04","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","documentos":2,"kg":947},{"fecha":"2026-11-04","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":270},{"fecha":"2026-11-04","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":411},{"fecha":"2026-11-04","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":684},{"fecha":"2026-11-04","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":280},{"fecha":"2026-11-04","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":1615},{"fecha":"2026-11-04","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":487},{"fecha":"2026-11-05","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":1,"kg":135},{"fecha":"2026-11-05","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":311},{"fecha":"2026-11-05","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","documentos":2,"kg":566},{"fecha":"2026-11-05","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":1,"kg":259},{"fecha":"2026-11-05","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","documentos":2,"kg":790},{"fecha":"2026-11-05","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":1,"kg":729},{"fecha":"2026-11-05","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":285},{"fecha":"2026-11-05","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":300},{"fecha":"2026-11-05","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":261},{"fecha":"2026-11-05","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":1,"kg":211},{"fecha":"2026-11-05","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":1,"kg":311},{"fecha":"2026-11-05","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","documentos":2,"kg":407},{"fecha":"2026-11-05","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":277},{"fecha":"2026-11-05","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":300},{"fecha":"2026-11-05","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":600},{"fecha":"2026-11-05","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":521},{"fecha":"2026-11-05","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":420},{"fecha":"2026-11-05","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":393},{"fecha":"2026-11-05","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":120},{"fecha":"2026-11-05","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":135},{"fecha":"2026-11-05","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":1,"kg":65},{"fecha":"2026-11-06","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":1,"kg":448},{"fecha":"2026-11-06","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":1,"kg":15},{"fecha":"2026-11-06","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":2,"kg":266},{"fecha":"2026-11-06","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":593},{"fecha":"2026-11-06","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":683},{"fecha":"2026-11-06","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":350},{"fecha":"2026-11-06","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":1,"kg":150},{"fecha":"2026-11-06","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","documentos":1,"kg":75},{"fecha":"2026-11-07","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":221},{"fecha":"2026-11-07","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"PLPL51","documentos":1,"kg":150},{"fecha":"2026-11-07","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":891},{"fecha":"2026-11-07","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":466},{"fecha":"2026-11-07","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":595},{"fecha":"2026-11-07","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":330},{"fecha":"2026-11-07","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":330},{"fecha":"2026-11-07","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":226},{"fecha":"2026-11-07","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","documentos":2,"kg":125},{"fecha":"2026-11-07","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":2,"kg":423},{"fecha":"2026-11-07","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","documentos":2,"kg":375},{"fecha":"2026-11-07","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":1,"kg":396},{"fecha":"2026-11-07","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":332},{"fecha":"2026-11-07","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":2,"kg":210},{"fecha":"2026-11-07","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":326},{"fecha":"2026-11-07","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":360},{"fecha":"2026-11-07","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":719},{"fecha":"2026-11-07","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":531},{"fecha":"2026-11-07","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":260},{"fecha":"2026-11-09","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","documentos":2,"kg":202},{"fecha":"2026-11-09","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":458},{"fecha":"2026-11-09","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","documentos":2,"kg":112},{"fecha":"2026-11-09","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","documentos":1,"kg":362},{"fecha":"2026-11-09","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":500},{"fecha":"2026-11-09","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":2,"kg":439},{"fecha":"2026-11-09","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","documentos":2,"kg":385},{"fecha":"2026-11-09","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":637},{"fecha":"2026-11-09","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","documentos":2,"kg":90},{"fecha":"2026-11-09","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":296},{"fecha":"2026-11-09","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":1,"kg":575},{"fecha":"2026-11-09","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":450},{"fecha":"2026-11-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":1154},{"fecha":"2026-11-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","documentos":2,"kg":678},{"fecha":"2026-11-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":847},{"fecha":"2026-11-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":300},{"fecha":"2026-11-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":1,"kg":217},{"fecha":"2026-11-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":1,"kg":301},{"fecha":"2026-11-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","documentos":2,"kg":690},{"fecha":"2026-11-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","documentos":2,"kg":418},{"fecha":"2026-11-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","documentos":2,"kg":315},{"fecha":"2026-11-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":682},{"fecha":"2026-11-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":1,"kg":230},{"fecha":"2026-11-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":544},{"fecha":"2026-11-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":1,"kg":356},{"fecha":"2026-11-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","documentos":2,"kg":191},{"fecha":"2026-11-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","documentos":2,"kg":80},{"fecha":"2026-11-11","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":350},{"fecha":"2026-11-11","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","documentos":2,"kg":341},{"fecha":"2026-11-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":2,"kg":360},{"fecha":"2026-11-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","documentos":2,"kg":425},{"fecha":"2026-11-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","documentos":2,"kg":217},{"fecha":"2026-11-11","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":150},{"fecha":"2026-11-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":401},{"fecha":"2026-11-12","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","documentos":2,"kg":146},{"fecha":"2026-11-12","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"LBRL85","documentos":2,"kg":1334},{"fecha":"2026-11-12","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","documentos":2,"kg":255},{"fecha":"2026-11-12","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":2,"kg":303},{"fecha":"2026-11-12","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","documentos":2,"kg":296},{"fecha":"2026-11-12","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":258},{"fecha":"2026-11-13","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","documentos":2,"kg":697},{"fecha":"2026-11-13","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","documentos":2,"kg":165},{"fecha":"2026-11-13","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","documentos":2,"kg":330},{"fecha":"2026-11-13","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","documentos":1,"kg":434},{"fecha":"2026-11-13","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","documentos":2,"kg":215},{"fecha":"2026-11-13","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","documentos":2,"kg":350},{"fecha":"2026-11-13","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","documentos":2,"kg":641},{"fecha":"2026-11-13","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","documentos":2,"kg":262},{"fecha":"2026-11-13","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","documentos":2,"kg":247},{"fecha":"2026-11-14","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","documentos":2,"kg":603}],"mix":[{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN11","kg_por_cilindro":11,"cilindros":10,"kg":110},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN15","kg_por_cilindro":15,"cilindros":55,"kg":825},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN45","kg_por_cilindro":45,"cilindros":7,"kg":315},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CGH15","kg_por_cilindro":15,"cilindros":4,"kg":60},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN11","kg_por_cilindro":11,"cilindros":7,"kg":77},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN15","kg_por_cilindro":15,"cilindros":106,"kg":1590},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN45","kg_por_cilindro":45,"cilindros":12,"kg":540},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CGH15","kg_por_cilindro":15,"cilindros":4,"kg":60},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN05","kg_por_cilindro":5,"cilindros":33,"kg":165},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN11","kg_por_cilindro":11,"cilindros":40,"kg":440},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN15","kg_por_cilindro":15,"cilindros":222,"kg":3330},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN45","kg_por_cilindro":45,"cilindros":52,"kg":2340},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN05","kg_por_cilindro":5,"cilindros":12,"kg":60},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN11","kg_por_cilindro":11,"cilindros":22,"kg":242},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN15","kg_por_cilindro":15,"cilindros":106,"kg":1590},{"mes":"2026-10","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN45","kg_por_cilindro":45,"cilindros":30,"kg":1350},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CGH15","kg_por_cilindro":15,"cilindros":117,"kg":1755},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN05","kg_por_cilindro":5,"cilindros":12,"kg":60},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN15","kg_por_cilindro":15,"cilindros":113,"kg":1695},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN45","kg_por_cilindro":45,"cilindros":44,"kg":1980},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CGH15","kg_por_cilindro":15,"cilindros":330,"kg":4950},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN05","kg_por_cilindro":5,"cilindros":48,"kg":240},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN11","kg_por_cilindro":11,"cilindros":30,"kg":330},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN15","kg_por_cilindro":15,"cilindros":354,"kg":5310},{"mes":"2026-10","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN45","kg_por_cilindro":45,"cilindros":62,"kg":2790},{"mes":"2026-10","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CGH15","kg_por_cilindro":15,"cilindros":15,"kg":225},{"mes":"2026-10","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN05","kg_por_cilindro":5,"cilindros":12,"kg":60},{"mes":"2026-10","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN11","kg_por_cilindro":11,"cilindros":37,"kg":407},{"mes":"2026-10","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN15","kg_por_cilindro":15,"cilindros":82,"kg":1230},{"mes":"2026-10","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN45","kg_por_cilindro":45,"cilindros":30,"kg":1350},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN05","kg_por_cilindro":5,"cilindros":12,"kg":60},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN11","kg_por_cilindro":11,"cilindros":25,"kg":275},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN15","kg_por_cilindro":15,"cilindros":228,"kg":3420},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN45","kg_por_cilindro":45,"cilindros":42,"kg":1890},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CGH15","kg_por_cilindro":15,"cilindros":5,"kg":75},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN05","kg_por_cilindro":5,"cilindros":30,"kg":150},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN11","kg_por_cilindro":11,"cilindros":47,"kg":517},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN15","kg_por_cilindro":15,"cilindros":285,"kg":4275},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN45","kg_por_cilindro":45,"cilindros":74,"kg":3330},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN05","kg_por_cilindro":5,"cilindros":19,"kg":95},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN11","kg_por_cilindro":11,"cilindros":18,"kg":198},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN15","kg_por_cilindro":15,"cilindros":237,"kg":3555},{"mes":"2026-10","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN45","kg_por_cilindro":45,"cilindros":31,"kg":1395},{"mes":"2026-10","sap":"12452151","venta_directa":"TOMAS ORTUZAR","comuna":"Rancagua","patente":"VBKX93","formato":"CN05","kg_por_cilindro":5,"cilindros":30,"kg":150},{"mes":"2026-10","sap":"12452151","venta_directa":"TOMAS ORTUZAR","comuna":"Rancagua","patente":"VBKX93","formato":"CN11","kg_por_cilindro":11,"cilindros":27,"kg":297},{"mes":"2026-10","sap":"12452151","venta_directa":"TOMAS ORTUZAR","comuna":"Rancagua","patente":"VBKX93","formato":"CN15","kg_por_cilindro":15,"cilindros":56,"kg":840},{"mes":"2026-10","sap":"12452151","venta_directa":"TOMAS ORTUZAR","comuna":"Rancagua","patente":"VBKX93","formato":"CN45","kg_por_cilindro":45,"cilindros":17,"kg":765},{"mes":"2026-10","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","formato":"CGH15","kg_por_cilindro":15,"cilindros":20,"kg":300},{"mes":"2026-10","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-10","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","formato":"CN11","kg_por_cilindro":11,"cilindros":30,"kg":330},{"mes":"2026-10","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","formato":"CN15","kg_por_cilindro":15,"cilindros":59,"kg":885},{"mes":"2026-10","sap":"12489561","venta_directa":"CONTRERAS RUBIO SPA","comuna":"Machalí","patente":"PBPV41","formato":"CN45","kg_por_cilindro":45,"cilindros":29,"kg":1305},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CGH15","kg_por_cilindro":15,"cilindros":7,"kg":105},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CN11","kg_por_cilindro":11,"cilindros":54,"kg":594},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CN15","kg_por_cilindro":15,"cilindros":70,"kg":1050},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CN45","kg_por_cilindro":45,"cilindros":16,"kg":720},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CGH15","kg_por_cilindro":15,"cilindros":119,"kg":1785},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN05","kg_por_cilindro":5,"cilindros":5,"kg":25},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN11","kg_por_cilindro":11,"cilindros":7,"kg":77},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN15","kg_por_cilindro":15,"cilindros":71,"kg":1065},{"mes":"2026-10","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN45","kg_por_cilindro":45,"cilindros":15,"kg":675},{"mes":"2026-10","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CGH15","kg_por_cilindro":15,"cilindros":34,"kg":510},{"mes":"2026-10","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN05","kg_por_cilindro":5,"cilindros":29,"kg":145},{"mes":"2026-10","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN11","kg_por_cilindro":11,"cilindros":12,"kg":132},{"mes":"2026-10","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN15","kg_por_cilindro":15,"cilindros":263,"kg":3945},{"mes":"2026-10","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN45","kg_por_cilindro":45,"cilindros":60,"kg":2700},{"mes":"2026-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN05","kg_por_cilindro":5,"cilindros":10,"kg":50},{"mes":"2026-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN11","kg_por_cilindro":11,"cilindros":36,"kg":396},{"mes":"2026-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN15","kg_por_cilindro":15,"cilindros":240,"kg":3600},{"mes":"2026-10","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN45","kg_por_cilindro":45,"cilindros":21,"kg":945},{"mes":"2026-10","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CGH15","kg_por_cilindro":15,"cilindros":1,"kg":15},{"mes":"2026-10","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-10","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN11","kg_por_cilindro":11,"cilindros":7,"kg":77},{"mes":"2026-10","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN15","kg_por_cilindro":15,"cilindros":38,"kg":570},{"mes":"2026-10","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN45","kg_por_cilindro":45,"cilindros":7,"kg":315},{"mes":"2026-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN05","kg_por_cilindro":5,"cilindros":23,"kg":115},{"mes":"2026-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN11","kg_por_cilindro":11,"cilindros":60,"kg":660},{"mes":"2026-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN15","kg_por_cilindro":15,"cilindros":443,"kg":6645},{"mes":"2026-10","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN45","kg_por_cilindro":45,"cilindros":111,"kg":4995},{"mes":"2026-10","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CGH15","kg_por_cilindro":15,"cilindros":58,"kg":870},{"mes":"2026-10","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN05","kg_por_cilindro":5,"cilindros":25,"kg":125},{"mes":"2026-10","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN11","kg_por_cilindro":11,"cilindros":48,"kg":528},{"mes":"2026-10","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN15","kg_por_cilindro":15,"cilindros":341,"kg":5115},{"mes":"2026-10","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN45","kg_por_cilindro":45,"cilindros":47,"kg":2115},{"mes":"2026-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CGH15","kg_por_cilindro":15,"cilindros":97,"kg":1455},{"mes":"2026-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN05","kg_por_cilindro":5,"cilindros":24,"kg":120},{"mes":"2026-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN11","kg_por_cilindro":11,"cilindros":31,"kg":341},{"mes":"2026-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN15","kg_por_cilindro":15,"cilindros":287,"kg":4305},{"mes":"2026-10","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN45","kg_por_cilindro":45,"cilindros":46,"kg":2070},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"HHZJ57","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"HHZJ57","formato":"CN11","kg_por_cilindro":11,"cilindros":3,"kg":33},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"HHZJ57","formato":"CN15","kg_por_cilindro":15,"cilindros":20,"kg":300},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN05","kg_por_cilindro":5,"cilindros":8,"kg":40},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN11","kg_por_cilindro":11,"cilindros":10,"kg":110},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN15","kg_por_cilindro":15,"cilindros":116,"kg":1740},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN45","kg_por_cilindro":45,"cilindros":15,"kg":675},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CGH15","kg_por_cilindro":15,"cilindros":16,"kg":240},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN05","kg_por_cilindro":5,"cilindros":17,"kg":85},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN11","kg_por_cilindro":11,"cilindros":33,"kg":363},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN15","kg_por_cilindro":15,"cilindros":178,"kg":2670},{"mes":"2026-10","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN45","kg_por_cilindro":45,"cilindros":38,"kg":1710},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CGH15","kg_por_cilindro":15,"cilindros":5,"kg":75},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN11","kg_por_cilindro":11,"cilindros":10,"kg":110},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN15","kg_por_cilindro":15,"cilindros":107,"kg":1605},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN45","kg_por_cilindro":45,"cilindros":20,"kg":900},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CGH15","kg_por_cilindro":15,"cilindros":15,"kg":225},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN05","kg_por_cilindro":5,"cilindros":10,"kg":50},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN11","kg_por_cilindro":11,"cilindros":11,"kg":121},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN15","kg_por_cilindro":15,"cilindros":93,"kg":1395},{"mes":"2026-10","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN45","kg_por_cilindro":45,"cilindros":18,"kg":810},{"mes":"2026-10","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CGH15","kg_por_cilindro":15,"cilindros":9,"kg":135},{"mes":"2026-10","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-10","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN11","kg_por_cilindro":11,"cilindros":9,"kg":99},{"mes":"2026-10","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN15","kg_por_cilindro":15,"cilindros":104,"kg":1560},{"mes":"2026-10","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN45","kg_por_cilindro":45,"cilindros":5,"kg":225},{"mes":"2026-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CGH15","kg_por_cilindro":15,"cilindros":29,"kg":435},{"mes":"2026-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN05","kg_por_cilindro":5,"cilindros":33,"kg":165},{"mes":"2026-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN11","kg_por_cilindro":11,"cilindros":29,"kg":319},{"mes":"2026-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN15","kg_por_cilindro":15,"cilindros":268,"kg":4020},{"mes":"2026-10","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN45","kg_por_cilindro":45,"cilindros":33,"kg":1485},{"mes":"2026-10","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-10","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","formato":"CN11","kg_por_cilindro":11,"cilindros":23,"kg":253},{"mes":"2026-10","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","formato":"CN15","kg_por_cilindro":15,"cilindros":140,"kg":2100},{"mes":"2026-10","sap":"12695791","venta_directa":"GAS EL TATA","comuna":"Rancagua","patente":"PBPV40","formato":"CN45","kg_por_cilindro":45,"cilindros":31,"kg":1395},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","formato":"CGH15","kg_por_cilindro":15,"cilindros":3,"kg":45},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","formato":"CN11","kg_por_cilindro":11,"cilindros":20,"kg":220},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","formato":"CN15","kg_por_cilindro":15,"cilindros":40,"kg":600},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"KCSX29","formato":"CN45","kg_por_cilindro":45,"cilindros":36,"kg":1620},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CGH15","kg_por_cilindro":15,"cilindros":1,"kg":15},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN11","kg_por_cilindro":11,"cilindros":5,"kg":55},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN15","kg_por_cilindro":15,"cilindros":16,"kg":240},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN45","kg_por_cilindro":45,"cilindros":18,"kg":810},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CGH15","kg_por_cilindro":15,"cilindros":40,"kg":600},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN05","kg_por_cilindro":5,"cilindros":7,"kg":35},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN11","kg_por_cilindro":11,"cilindros":46,"kg":506},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN15","kg_por_cilindro":15,"cilindros":156,"kg":2340},{"mes":"2026-10","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN45","kg_por_cilindro":45,"cilindros":89,"kg":4005},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CGH15","kg_por_cilindro":15,"cilindros":47,"kg":705},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN05","kg_por_cilindro":5,"cilindros":23,"kg":115},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN11","kg_por_cilindro":11,"cilindros":35,"kg":385},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN15","kg_por_cilindro":15,"cilindros":196,"kg":2940},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN45","kg_por_cilindro":45,"cilindros":48,"kg":2160},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CGH15","kg_por_cilindro":15,"cilindros":44,"kg":660},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN05","kg_por_cilindro":5,"cilindros":13,"kg":65},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN11","kg_por_cilindro":11,"cilindros":20,"kg":220},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN15","kg_por_cilindro":15,"cilindros":100,"kg":1500},{"mes":"2026-10","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN45","kg_por_cilindro":45,"cilindros":29,"kg":1305},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CGH15","kg_por_cilindro":15,"cilindros":5,"kg":75},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CN05","kg_por_cilindro":5,"cilindros":6,"kg":30},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CN11","kg_por_cilindro":11,"cilindros":2,"kg":22},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CN15","kg_por_cilindro":15,"cilindros":32,"kg":480},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CN45","kg_por_cilindro":45,"cilindros":4,"kg":180},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN05","kg_por_cilindro":5,"cilindros":5,"kg":25},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN15","kg_por_cilindro":15,"cilindros":60,"kg":900},{"mes":"2026-10","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN45","kg_por_cilindro":45,"cilindros":8,"kg":360},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN11","kg_por_cilindro":11,"cilindros":4,"kg":44},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN15","kg_por_cilindro":15,"cilindros":15,"kg":225},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"HTRV39","formato":"CN45","kg_por_cilindro":45,"cilindros":4,"kg":180},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN11","kg_por_cilindro":11,"cilindros":2,"kg":22},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN15","kg_por_cilindro":15,"cilindros":28,"kg":420},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"LHHT21","formato":"CN45","kg_por_cilindro":45,"cilindros":4,"kg":180},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"PLPL51","formato":"CN15","kg_por_cilindro":15,"cilindros":10,"kg":150},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CGH15","kg_por_cilindro":15,"cilindros":3,"kg":45},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN05","kg_por_cilindro":5,"cilindros":6,"kg":30},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN11","kg_por_cilindro":11,"cilindros":9,"kg":99},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN15","kg_por_cilindro":15,"cilindros":66,"kg":990},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TGHS65","formato":"CN45","kg_por_cilindro":45,"cilindros":16,"kg":720},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN11","kg_por_cilindro":11,"cilindros":6,"kg":66},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN15","kg_por_cilindro":15,"cilindros":25,"kg":375},{"mes":"2026-11","sap":"12358799","venta_directa":"ANDRES SEBASTIAN BARAHONA FUENTES","comuna":"Rancagua","patente":"TYJG62","formato":"CN45","kg_por_cilindro":45,"cilindros":4,"kg":180},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CGH15","kg_por_cilindro":15,"cilindros":31,"kg":465},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN11","kg_por_cilindro":11,"cilindros":3,"kg":33},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN15","kg_por_cilindro":15,"cilindros":29,"kg":435},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"KZRY42","formato":"CN45","kg_por_cilindro":45,"cilindros":10,"kg":450},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"LBRL85","formato":"CGH15","kg_por_cilindro":15,"cilindros":36,"kg":540},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"LBRL85","formato":"CN11","kg_por_cilindro":11,"cilindros":4,"kg":44},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"LBRL85","formato":"CN15","kg_por_cilindro":15,"cilindros":26,"kg":390},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"LBRL85","formato":"CN45","kg_por_cilindro":45,"cilindros":8,"kg":360},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CGH15","kg_por_cilindro":15,"cilindros":114,"kg":1710},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN05","kg_por_cilindro":5,"cilindros":12,"kg":60},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN11","kg_por_cilindro":11,"cilindros":22,"kg":242},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN15","kg_por_cilindro":15,"cilindros":141,"kg":2115},{"mes":"2026-11","sap":"12415405","venta_directa":"CLAUDIO CORDERO EIRL","comuna":"Rancagua","patente":"SLKW16","formato":"CN45","kg_por_cilindro":45,"cilindros":16,"kg":720},{"mes":"2026-11","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CGH15","kg_por_cilindro":15,"cilindros":7,"kg":105},{"mes":"2026-11","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN11","kg_por_cilindro":11,"cilindros":17,"kg":187},{"mes":"2026-11","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN15","kg_por_cilindro":15,"cilindros":20,"kg":300},{"mes":"2026-11","sap":"12425928","venta_directa":"JOSÉ ARIAS EIRL","comuna":"Rancagua","patente":"JJZF80","formato":"CN45","kg_por_cilindro":45,"cilindros":6,"kg":270},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN15","kg_por_cilindro":15,"cilindros":58,"kg":870},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKP87","formato":"CN45","kg_por_cilindro":45,"cilindros":9,"kg":405},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN05","kg_por_cilindro":5,"cilindros":13,"kg":65},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN11","kg_por_cilindro":11,"cilindros":16,"kg":176},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN15","kg_por_cilindro":15,"cilindros":90,"kg":1350},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"SLKX65","formato":"CN45","kg_por_cilindro":45,"cilindros":23,"kg":1035},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN11","kg_por_cilindro":11,"cilindros":13,"kg":143},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN15","kg_por_cilindro":15,"cilindros":68,"kg":1020},{"mes":"2026-11","sap":"12446475","venta_directa":"DISTRIBUIDOR GAS LEANDRO ANDRÉS VILLAGRA","comuna":"Rancagua","patente":"VSJL89","formato":"CN45","kg_por_cilindro":45,"cilindros":23,"kg":1035},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CGH15","kg_por_cilindro":15,"cilindros":15,"kg":225},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CN11","kg_por_cilindro":11,"cilindros":22,"kg":242},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CN15","kg_por_cilindro":15,"cilindros":20,"kg":300},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"DRKD65","formato":"CN45","kg_por_cilindro":45,"cilindros":4,"kg":180},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CGH15","kg_por_cilindro":15,"cilindros":49,"kg":735},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN15","kg_por_cilindro":15,"cilindros":28,"kg":420},{"mes":"2026-11","sap":"12495777","venta_directa":"LUIS CHACON SALINAS","comuna":"Olivar","patente":"RXTV68","formato":"CN45","kg_por_cilindro":45,"cilindros":7,"kg":315},{"mes":"2026-11","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CGH15","kg_por_cilindro":15,"cilindros":4,"kg":60},{"mes":"2026-11","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN05","kg_por_cilindro":5,"cilindros":20,"kg":100},{"mes":"2026-11","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN11","kg_por_cilindro":11,"cilindros":5,"kg":55},{"mes":"2026-11","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN15","kg_por_cilindro":15,"cilindros":112,"kg":1680},{"mes":"2026-11","sap":"12528792","venta_directa":"MAYRO GAS SPA","comuna":"Requínoa","patente":"SXKP88","formato":"CN45","kg_por_cilindro":45,"cilindros":20,"kg":900},{"mes":"2026-11","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-11","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-11","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-11","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN15","kg_por_cilindro":15,"cilindros":66,"kg":990},{"mes":"2026-11","sap":"12538054","venta_directa":"DANYGAS EIRL","comuna":"Requínoa","patente":"SXKR16","formato":"CN45","kg_por_cilindro":45,"cilindros":11,"kg":495},{"mes":"2026-11","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CGH15","kg_por_cilindro":15,"cilindros":1,"kg":15},{"mes":"2026-11","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN15","kg_por_cilindro":15,"cilindros":4,"kg":60},{"mes":"2026-11","sap":"12538101","venta_directa":"JHONY GAS SPA","comuna":"Rancagua","patente":"PLCC72","formato":"CN45","kg_por_cilindro":45,"cilindros":1,"kg":45},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","formato":"CN11","kg_por_cilindro":11,"cilindros":19,"kg":209},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","formato":"CN15","kg_por_cilindro":15,"cilindros":116,"kg":1740},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"BZCY46","formato":"CN45","kg_por_cilindro":45,"cilindros":28,"kg":1260},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN11","kg_por_cilindro":11,"cilindros":3,"kg":33},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN15","kg_por_cilindro":15,"cilindros":21,"kg":315},{"mes":"2026-11","sap":"12539613","venta_directa":"LUIS VALLEJOS","comuna":"Rancagua","patente":"RWGJ81","formato":"CN45","kg_por_cilindro":45,"cilindros":6,"kg":270},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","formato":"CGH15","kg_por_cilindro":15,"cilindros":7,"kg":105},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","formato":"CN05","kg_por_cilindro":5,"cilindros":5,"kg":25},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","formato":"CN11","kg_por_cilindro":11,"cilindros":7,"kg":77},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","formato":"CN15","kg_por_cilindro":15,"cilindros":78,"kg":1170},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"KBXK35","formato":"CN45","kg_por_cilindro":45,"cilindros":10,"kg":450},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CGH15","kg_por_cilindro":15,"cilindros":16,"kg":240},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN05","kg_por_cilindro":5,"cilindros":6,"kg":30},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN11","kg_por_cilindro":11,"cilindros":17,"kg":187},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN15","kg_por_cilindro":15,"cilindros":95,"kg":1425},{"mes":"2026-11","sap":"12539703","venta_directa":"FELIPE SAAVEDRA SAAVEDRA E.I.R.L.","comuna":"Rancagua","patente":"VRSG64","formato":"CN45","kg_por_cilindro":45,"cilindros":12,"kg":540},{"mes":"2026-11","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CGH15","kg_por_cilindro":15,"cilindros":25,"kg":375},{"mes":"2026-11","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN05","kg_por_cilindro":5,"cilindros":4,"kg":20},{"mes":"2026-11","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN11","kg_por_cilindro":11,"cilindros":15,"kg":165},{"mes":"2026-11","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN15","kg_por_cilindro":15,"cilindros":80,"kg":1200},{"mes":"2026-11","sap":"12540141","venta_directa":"CESAR ACUÑA","comuna":"Rancagua","patente":"PSFY82","formato":"CN45","kg_por_cilindro":45,"cilindros":20,"kg":900},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN05","kg_por_cilindro":5,"cilindros":4,"kg":20},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN15","kg_por_cilindro":15,"cilindros":48,"kg":720},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"THGK44","formato":"CN45","kg_por_cilindro":45,"cilindros":9,"kg":405},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CGH15","kg_por_cilindro":15,"cilindros":1,"kg":15},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN15","kg_por_cilindro":15,"cilindros":60,"kg":900},{"mes":"2026-11","sap":"12540245","venta_directa":"CONSTANZA GUTIERREZ","comuna":"Rancagua","patente":"TYJG58","formato":"CN45","kg_por_cilindro":45,"cilindros":9,"kg":405},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN11","kg_por_cilindro":11,"cilindros":3,"kg":33},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN15","kg_por_cilindro":15,"cilindros":21,"kg":315},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"KHHG34","formato":"CN45","kg_por_cilindro":45,"cilindros":7,"kg":315},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CGH15","kg_por_cilindro":15,"cilindros":3,"kg":45},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN11","kg_por_cilindro":11,"cilindros":3,"kg":33},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN15","kg_por_cilindro":15,"cilindros":50,"kg":750},{"mes":"2026-11","sap":"12571057","venta_directa":"NICOLAS SANCHEZ GUERRA","comuna":"Rancagua","patente":"VRSG95","formato":"CN45","kg_por_cilindro":45,"cilindros":7,"kg":315},{"mes":"2026-11","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CGH15","kg_por_cilindro":15,"cilindros":7,"kg":105},{"mes":"2026-11","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN05","kg_por_cilindro":5,"cilindros":3,"kg":15},{"mes":"2026-11","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN11","kg_por_cilindro":11,"cilindros":2,"kg":22},{"mes":"2026-11","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN15","kg_por_cilindro":15,"cilindros":54,"kg":810},{"mes":"2026-11","sap":"12651480","venta_directa":"JESUS ARTIGAS EIRL","comuna":"Rancagua","patente":"HJZT70","formato":"CN45","kg_por_cilindro":45,"cilindros":8,"kg":360},{"mes":"2026-11","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CGH15","kg_por_cilindro":15,"cilindros":16,"kg":240},{"mes":"2026-11","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN05","kg_por_cilindro":5,"cilindros":5,"kg":25},{"mes":"2026-11","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN11","kg_por_cilindro":11,"cilindros":10,"kg":110},{"mes":"2026-11","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN15","kg_por_cilindro":15,"cilindros":93,"kg":1395},{"mes":"2026-11","sap":"12657237","venta_directa":"SOFI GAS SPA","comuna":"Mostazal","patente":"TYJL90","formato":"CN45","kg_por_cilindro":45,"cilindros":14,"kg":630},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CGH15","kg_por_cilindro":15,"cilindros":37,"kg":555},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN05","kg_por_cilindro":5,"cilindros":5,"kg":25},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN11","kg_por_cilindro":11,"cilindros":34,"kg":374},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN15","kg_por_cilindro":15,"cilindros":102,"kg":1530},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"PBPV41","formato":"CN45","kg_por_cilindro":45,"cilindros":73,"kg":3285},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CGH15","kg_por_cilindro":15,"cilindros":27,"kg":405},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN05","kg_por_cilindro":5,"cilindros":4,"kg":20},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN15","kg_por_cilindro":15,"cilindros":47,"kg":705},{"mes":"2026-11","sap":"12699265","venta_directa":"VENTA DE GAS JENNIFFER","comuna":"Rancagua","patente":"RTWH66","formato":"CN45","kg_por_cilindro":45,"cilindros":27,"kg":1215},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CGH15","kg_por_cilindro":15,"cilindros":21,"kg":315},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN05","kg_por_cilindro":5,"cilindros":4,"kg":20},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN11","kg_por_cilindro":11,"cilindros":12,"kg":132},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN15","kg_por_cilindro":15,"cilindros":58,"kg":870},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"PLPP25","formato":"CN45","kg_por_cilindro":45,"cilindros":16,"kg":720},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CGH15","kg_por_cilindro":15,"cilindros":14,"kg":210},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN05","kg_por_cilindro":5,"cilindros":2,"kg":10},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN11","kg_por_cilindro":11,"cilindros":8,"kg":88},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN15","kg_por_cilindro":15,"cilindros":30,"kg":450},{"mes":"2026-11","sap":"12717968","venta_directa":"JHONNY JARA GAS SPA","comuna":"Requínoa","patente":"RWGK42","formato":"CN45","kg_por_cilindro":45,"cilindros":13,"kg":585},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CGH15","kg_por_cilindro":15,"cilindros":2,"kg":30},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CN15","kg_por_cilindro":15,"cilindros":6,"kg":90},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"JHBS90","formato":"CN45","kg_por_cilindro":45,"cilindros":8,"kg":360},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN05","kg_por_cilindro":5,"cilindros":1,"kg":5},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN11","kg_por_cilindro":11,"cilindros":1,"kg":11},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN15","kg_por_cilindro":15,"cilindros":13,"kg":195},{"mes":"2026-11","sap":"12744957","venta_directa":"DISTRIBUIDORA KM","comuna":"Rancagua","patente":"TBPC83","formato":"CN45","kg_por_cilindro":45,"cilindros":5,"kg":225}]};</script>
+<script>
+  /* Versión mínima del motor del dashboard: datos incluidos, cálculos, dibujos y filtros */
+  window.dash = (() => {
+    const RAW = window.__DATOS__;
+    const calcs = new Map();
+    const draws = new Map();
+    const onDataFns = [];
+    let params = {};
+    const cache = new Map();
+    const data = (id) => {
+      if (RAW[id]) return { status: 'ok', data: RAW[id], refreshing: false, meta: [] };
+      const c = calcs.get(id);
+      if (!c) return { status: 'missing', data: [], refreshing: false, meta: [] };
+      if (!cache.has(id)) cache.set(id, c.fn(...c.inputs.map((i) => data(i).data)));
+      return { status: 'ok', data: cache.get(id), refreshing: false, meta: [] };
+    };
+    const run = (name) => {
+      const fn = draws.get(name);
+      if (!fn) return;
+      document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => {
+        if (el.closest('[hidden]')) return;
+        try { fn(el); } catch (e) { console.error('Dibujo ' + name, e); }
+      });
+    };
+    const runAll = () => {
+      onDataFns.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
+      for (const n of draws.keys()) run(n);
+    };
+    return {
+      data,
+      calc: (id, def) => calcs.set(id, def),
+      draw: (name, fn) => { if (fn) draws.set(name, fn); else run(name); },
+      onData: (fn) => onDataFns.push(fn),
+      params: () => ({ ...params }),
+      setParams: (p) => {
+        for (const [k, v] of Object.entries(p)) { if (v == null || v === '') delete params[k]; else params[k] = v; }
+        runAll();
+      },
+      resetParams: () => { params = {}; runAll(); },
+      colors: ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)'],
+      setLink: () => {},
+      refresh: () => {},
+      _runAll: runAll
+    };
+  })();
+</script>
+</head>
+<body>
+<main class="pagina">
+<style>
+  .vd { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+  .vd-head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .vd-head h1 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); text-wrap: balance; }
+  .vd-take { margin: 0; font-size: var(--cds-font-size-body); color: var(--color-fg-muted); max-width: 70ch; }
+  .vd-take b { color: var(--color-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .vd-take b.is-bad { color: var(--color-bad); }
+
+  .vd-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: var(--cds-gap-md); }
+  .vd-tile { display: flex; flex-direction: column; gap: var(--cds-gap-xs); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md) var(--cds-pad-lg); min-width: 0; }
+  .vd-tile-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vd-tile-num { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); line-height: 1.1; font-variant-numeric: tabular-nums; min-height: 1.1em; }
+  .vd-tile-num.is-bad { color: var(--color-bad); }
+  .vd-tile-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+
+  .vd-card { display: flex; flex-direction: column; gap: var(--cds-gap-sm); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  .vd-card h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+  .vd-note { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vd-note b { color: var(--color-fg); font-weight: 600; }
+  .vd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--cds-gap-md); }
+
+  .vd-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vd-legend span { display: inline-flex; align-items: center; gap: var(--cds-gap-xs); }
+  .vd-sw { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+  .vd-sw-ok { background: var(--cds-chart-muted); }
+  .vd-sw-bad { background: var(--cds-chart-status-critical); }
+
+  .vd-chart { position: relative; width: 100%; }
+  .vd-chart-vd { min-height: 3rem; }
+  .vd-chart-vd.dash-skeleton { min-height: 924px; }
+  .vd-chart-dia { min-height: 220px; }
+  .vd-chart-dist { min-height: 176px; }
+  .vd-chart svg { display: block; overflow: visible; }
+  .vd-chart text { font-family: var(--font-anthropic-sans); font-size: 12px; fill: var(--color-fg); font-variant-numeric: tabular-nums; }
+  .vd-chart text.vd-muted { fill: var(--color-fg-muted); }
+  .vd-chart text.vd-in { fill: var(--color-bg); font-size: 11px; pointer-events: none; }
+  .vd-chart .vd-hit { cursor: default; }
+  .vd-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg); white-space: nowrap; z-index: 2; }
+  .vd-tip .vd-tip-k { color: var(--cds-text-secondary); }
+  .vd-tip .vd-tip-v { font-variant-numeric: tabular-nums; }
+  .vd-fail { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vd-fail::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
+
+  .vd-tools { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+  .vd-tools input { flex: 1 1 14rem; min-width: 0; font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); }
+  .vd-tools input:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: 1px; }
+  .vd-tablewrap { max-height: 32rem; overflow: auto; border-top: 1px solid var(--color-border-line); }
+  .vd-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+  .vd-table th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding: 0; z-index: 1; }
+  .vd-table th button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: var(--cds-pad-sm) var(--cds-pad-sm); cursor: pointer; }
+  .vd-table th button:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: -2px; }
+  .vd-table th.vd-num, .vd-table td.vd-num { text-align: right; }
+  .vd-table th[aria-sort="ascending"] button::after { content: " ▲"; }
+  .vd-table th[aria-sort="descending"] button::after { content: " ▼"; }
+  .vd-table td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: middle; }
+  .vd-table td.vd-name { min-width: 14rem; }
+  .vd-table td.vd-plate { font-weight: 600; letter-spacing: 0.04em; }
+  .vd-table tr.is-bajo td { color: var(--color-bad); }
+  .vd-table tr.is-bajo td.vd-plate, .vd-table tr.is-bajo td.vd-kg { font-weight: 700; }
+  .vd-kg { white-space: nowrap; }
+  .vd-kgbar { display: inline-block; vertical-align: middle; height: 0.5rem; border-radius: 2px; background: var(--cds-chart-muted); margin-right: var(--cds-gap-xs); }
+  tr.is-bajo .vd-kgbar { background: var(--cds-chart-status-critical); }
+  @media (max-width: 40rem) { .vd-table .vd-hide-sm { display: none; } }
+  .vd-tabs { display: flex; gap: var(--cds-gap-xs); border-bottom: 1px solid var(--color-border-line); overflow-x: auto; }
+  .vd-tabs button { all: unset; box-sizing: border-box; cursor: pointer; padding: var(--cds-pad-sm) var(--cds-pad-md); font-size: var(--cds-font-size-body); color: var(--color-fg-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .vd-tabs button[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
+  .vd-tabs button:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: -2px; }
+  .vd-page { display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+  .vd-intro { margin: 0; font-size: var(--cds-font-size-body); color: var(--color-fg-muted); max-width: 70ch; }
+
+  .vd-mixtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: var(--cds-gap-md); }
+  .vd-mixtile .vd-tile-label { display: inline-flex; align-items: center; gap: var(--cds-gap-xs); }
+  .vd-chart-mix { min-height: 10rem; }
+  .vd-chart-mix.dash-skeleton { min-height: 1484px; }
+  .vd-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); align-items: center; padding: var(--cds-pad-sm) var(--cds-pad-md); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+  .vd-filter { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-body); }
+  .vd-filter label { color: var(--color-fg-muted); }
+  .vd-filter select { font: inherit; color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); max-width: 100%; min-width: 0; }
+  .vd-filter select:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: 1px; }
+  .vd-chart text.vd-plate-lbl { font-weight: 600; letter-spacing: 0.03em; }
+  .vd-table td.vd-zero { color: var(--color-fg-muted); }
+  .vd-table td.vd-top { font-weight: 700; }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+
+  /* Versión de una sola página: encabezado con filtros, franja de cifras, gráfico principal con columna lateral y tabla única */
+  .vx { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+  .vx-head { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); align-items: flex-end; justify-content: space-between; }
+  .vx-head-text { display: flex; flex-direction: column; gap: var(--cds-gap-xs); flex: 1 1 28rem; min-width: 0; }
+  .vx-head h1 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); text-wrap: balance; }
+  .vx-take { margin: 0; font-size: var(--cds-font-size-body); color: var(--color-fg-muted); max-width: 72ch; }
+  .vx-take b { color: var(--color-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .vx-take b.is-bad { color: var(--color-bad); }
+  .vx-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: flex-end; min-width: 0; }
+  .vx-filter { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 100%; }
+  .vx-filter label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vx-filter select { font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); max-width: 100%; min-width: 0; }
+  .vx-filter select:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: 1px; }
+
+  .vx-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 1px; background: var(--color-border-line); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; }
+  .vx-kpi { display: flex; flex-direction: column; gap: var(--cds-gap-xs); background: var(--color-panel); padding: var(--cds-pad-md) var(--cds-pad-lg); min-width: 0; }
+  .vx-kpi-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vx-kpi-num { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); line-height: 1.1; font-variant-numeric: tabular-nums; min-height: 1.1em; }
+  .vx-kpi-num.is-bad { color: var(--color-bad); }
+
+  .vx-main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--cds-gap-md); align-items: start; }
+  @media (max-width: 60rem) { .vx-main { grid-template-columns: minmax(0, 1fr); } }
+  .vx-side { display: flex; flex-direction: column; gap: var(--cds-gap-md); min-width: 0; }
+  .vx-chart-kg { min-height: 6rem; }
+  .vx-chart-kg.dash-skeleton { min-height: 1320px; }
+  .vx-chart-mix { min-height: 52px; }
+  .vd-chart text.vx-ref { fill: var(--color-fg-muted); font-size: 11px; }
+  .vd-chart text.vx-grp { font-weight: 600; }
+
+  .vx-card-head { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; justify-content: space-between; }
+  .vx-card-head h2 { margin: 0; }
+  .vx-card-head input { flex: 0 1 18rem; min-width: 0; font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); }
+  .vx-card-head input:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: 1px; }
+
+  .vx-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+  .vx-table th { text-align: left; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding: var(--cds-pad-xs) var(--cds-pad-sm); }
+  .vx-table td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+  .vx-table th.vd-num, .vx-table td.vd-num { text-align: right; }
+  .vx-mixtable td.vx-fmt { white-space: nowrap; }
+  .vx-mixtable .vd-sw { margin-right: var(--cds-gap-xs); vertical-align: -1px; }
+
+  .vx-rank td.vd-plate { white-space: nowrap; }
+  .vx-bar { position: relative; display: inline-block; vertical-align: middle; width: 4.5rem; height: 0.55rem; margin-right: var(--cds-gap-xs); background: var(--cds-chart-grid); border-radius: 2px; overflow: hidden; }
+  .vx-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cds-chart-muted); }
+  .vx-bar-tick { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--color-fg-muted); }
+  tr.is-bajo .vx-bar-fill { background: var(--cds-chart-status-critical); }
+  .vx-mini { display: inline-flex; vertical-align: middle; width: 4.5rem; height: 0.55rem; margin-right: var(--cds-gap-xs); border-radius: 2px; overflow: hidden; background: var(--cds-chart-grid); }
+  .vx-mini span { display: block; height: 100%; }
+  .vd-table tr.is-bajo td.vd-plate, .vd-table tr.is-bajo td.vx-kgcell { color: var(--color-bad); font-weight: 700; }
+  .vd-table tr.is-bajo td { color: inherit; }
+</style>
+
+<div class="vx">
+  <header class="vx-head">
+    <div class="vx-head-text">
+      <h1 id="titulo">Patentes de Venta Directa · <span data-draw="kpi" data-source="periodo" data-keys="mes" data-field="mes_txt">—</span></h1>
+      <p class="vx-take"><b data-draw="kpi" data-source="kpis" data-field="ventas_directas" data-keys="mes,vd">—</b> ventas directas trabajaron con <b data-draw="kpi" data-source="kpis" data-field="patentes" data-keys="mes,vd">—</b> patentes distintas entre el <span data-draw="kpi" data-source="periodo" data-keys="mes" data-field="desde_txt">—</span> y el <span data-draw="kpi" data-source="periodo" data-keys="mes" data-field="hasta_txt">—</span>. <b class="is-bad" data-draw="kpi" data-source="kpis" data-field="bajo_umbral" data-keys="mes,vd">—</b> quedaron bajo <span data-draw="umbral">—</span> kg en el mes.</p>
+    </div>
+    <div class="vx-filters" id="filtros" role="group" aria-label="Filtros">
+      <div class="vx-filter">
+        <label for="vd-f-mes">Mes</label>
+        <select id="vd-f-mes" data-draw="filtro-mes" data-source="periodo"></select>
+      </div>
+      <div class="vx-filter">
+        <label for="vd-f-vd">Venta directa</label>
+        <select id="vd-f-vd" data-draw="filtro-vd" data-source="resumen"></select>
+      </div>
+    </div>
+  </header>
+
+  <section class="vx-kpis" id="cifras" aria-label="Cifras del mes">
+    <div class="vx-kpi">
+      <span class="vx-kpi-label">Ventas directas</span>
+      <span class="vx-kpi-num dash-skeleton" data-draw="kpi" data-source="kpis" data-field="ventas_directas" data-keys="mes,vd">—</span>
+    </div>
+    <div class="vx-kpi">
+      <span class="vx-kpi-label">Patentes distintas</span>
+      <span class="vx-kpi-num dash-skeleton" data-draw="kpi" data-source="kpis" data-field="patentes" data-keys="mes,vd">—</span>
+    </div>
+    <div class="vx-kpi">
+      <span class="vx-kpi-label">Kg vendidos</span>
+      <span class="vx-kpi-num dash-skeleton" data-draw="kpi" data-source="kpis" data-field="kg" data-keys="mes,vd">—</span>
+    </div>
+    <div class="vx-kpi">
+      <span class="vx-kpi-label">Kg por patente</span>
+      <span class="vx-kpi-num dash-skeleton" data-draw="kpi" data-source="kpis" data-field="kg_promedio" data-keys="mes,vd">—</span>
+    </div>
+    <div class="vx-kpi">
+      <span class="vx-kpi-label">Cilindros</span>
+      <span class="vx-kpi-num dash-skeleton" data-draw="kpi" data-source="cilindros_total" data-field="cilindros" data-keys="mes,vd">—</span>
+    </div>
+    <div class="vx-kpi">
+      <span class="vx-kpi-label">Patentes bajo <span data-draw="umbral">—</span> kg</span>
+      <span class="vx-kpi-num is-bad dash-skeleton" data-draw="kpi" data-source="kpis" data-field="bajo_umbral" data-keys="mes,vd">—</span>
+    </div>
+  </section>
+
+  <div class="vx-main">
+    <section class="vd-card" id="kilos-por-patente">
+      <h2 id="h-kilos-por-patente">Kilos de cada patente, por venta directa</h2>
+      <p class="vd-note">Una barra por patente, agrupadas por venta directa. La línea punteada marca los <span data-draw="umbral">—</span> kg del mes; en rojo, las que no llegan. Pasa el cursor sobre una barra para ver documentos y días.</p>
+      <div class="vd-chart vx-chart-kg dash-skeleton" data-draw="kg-patentes" data-source="resumen detalle"></div>
+      <p class="vd-note">Ventas directas según cantidad de patentes: <b data-draw="dist-txt" data-source="distribucion">—</b></p>
+    </section>
+
+    <div class="vx-side">
+      <section class="vd-card" id="mix-de-cilindros">
+        <h2 id="h-mix-de-cilindros">Mix de cilindros</h2>
+        <p class="vd-note">Parte de cada formato en los cilindros vendidos en el mes, por todas las ventas directas o por la elegida.</p>
+        <div class="vd-chart vx-chart-mix dash-skeleton" data-draw="mix-barra" data-source="mix_total"></div>
+        <table class="vx-table vx-mixtable" data-source="mix_total" data-row-key="mes,vd,formato">
+          <thead>
+            <tr>
+              <th data-field="formato">Formato</th>
+              <th data-field="cilindros" class="vd-num">Cilindros</th>
+              <th data-field="pct" class="vd-num">% cilindros</th>
+              <th data-field="kg" class="vd-num">Kg</th>
+            </tr>
+          </thead>
+          <tbody data-draw="mix-tabla"></tbody>
+        </table>
+      </section>
+
+      <section class="vd-card" id="patentes-por-dia">
+        <h2 id="h-patentes-por-dia">Patentes con movimiento por día</h2>
+        <p class="vd-note">Patentes distintas con al menos un documento ese día. Los días sin barra no tienen documentos.</p>
+        <div class="vd-chart vd-chart-dia dash-skeleton" data-draw="por-dia" data-source="por_dia periodo"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="vd-card" id="patentes-del-mes">
+    <div class="vx-card-head">
+      <h2 id="h-patentes-del-mes">Patentes del mes</h2>
+      <input id="vd-buscar" type="search" placeholder="Buscar por nombre, SAP o patente" aria-label="Buscar patentes">
+    </div>
+    <p class="vd-note">Una fila por patente y venta directa. La barra de kilos marca los <span data-draw="umbral">—</span> kg con una raya; la de cilindros muestra su mix por formato. Patente que trabajó para más de una venta directa: <b data-draw="kpi" data-source="kpis" data-field="compartidas" data-keys="mes,vd">—</b>.</p>
+    <div class="vd-legend">
+      <span><i class="vd-sw" data-fmt="CN05"></i>5 kg</span>
+      <span><i class="vd-sw" data-fmt="CN11"></i>11 kg</span>
+      <span><i class="vd-sw" data-fmt="CN15"></i>15 kg</span>
+      <span><i class="vd-sw" data-fmt="CN45"></i>45 kg</span>
+      <span><i class="vd-sw" data-fmt="CGH15"></i>15 kg grúa horquilla</span>
+    </div>
+    <div class="vd-tablewrap">
+      <table class="vd-table vx-rank" data-source="detalle" data-row-key="mes,sap,patente">
+        <thead>
+          <tr>
+            <th data-field="patente" aria-sort="none"><button type="button" data-sort="patente">Patente</button></th>
+            <th data-field="venta_directa" aria-sort="none"><button type="button" data-sort="venta_directa">Venta directa</button></th>
+            <th data-field="kg" class="vd-num" aria-sort="descending"><button type="button" data-sort="kg">Kg</button></th>
+            <th data-field="cilindros" data-source="mix_patente" class="vd-num" aria-sort="none"><button type="button" data-sort="cilindros">Cilindros</button></th>
+            <th data-field="cil_5" data-source="mix_patente" class="vd-num vd-hide-sm" aria-sort="none"><button type="button" data-sort="cil_5">5 kg</button></th>
+            <th data-field="cil_11" data-source="mix_patente" class="vd-num vd-hide-sm" aria-sort="none"><button type="button" data-sort="cil_11">11 kg</button></th>
+            <th data-field="cil_15" data-source="mix_patente" class="vd-num vd-hide-sm" aria-sort="none"><button type="button" data-sort="cil_15">15 kg</button></th>
+            <th data-field="cil_45" data-source="mix_patente" class="vd-num vd-hide-sm" aria-sort="none"><button type="button" data-sort="cil_45">45 kg</button></th>
+            <th data-field="cil_gh" data-source="mix_patente" class="vd-num vd-hide-sm" aria-sort="none"><button type="button" data-sort="cil_gh">Grúa 15 kg</button></th>
+            <th data-field="dias" class="vd-num vd-hide-sm" aria-sort="none"><button type="button" data-sort="dias">Días</button></th>
+          </tr>
+        </thead>
+        <tbody data-draw="ranking"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  /* Cálculos por mes y venta directa sobre el detalle diario (archivo diario_*.csv) */
+  dash.calc('detalle', {
+    inputs: ['diario'],
+    title: 'Kilos por patente',
+    description: 'Por mes, venta directa y patente: documentos, días con movimiento y kg.',
+    fn: (diario) => {
+      const m = new Map();
+      for (const r of diario) {
+        const mes = String(r.fecha).slice(0, 7);
+        const k = mes + '|' + r.sap + '|' + r.patente;
+        const o = m.get(k) || { mes, sap: String(r.sap), venta_directa: r.venta_directa, comuna: r.comuna, patente: r.patente, documentos: 0, dias: 0, kg: 0 };
+        o.documentos += Number(r.documentos);
+        o.dias += 1;
+        o.kg += Number(r.kg);
+        m.set(k, o);
+      }
+      return [...m.values()].sort((a, b) => b.kg - a.kg);
+    }
+  });
+
+  dash.calc('resumen', {
+    inputs: ['detalle'],
+    title: 'Patentes por venta directa',
+    description: 'Por mes y venta directa: cantidad de patentes, kg y patentes bajo 3.000 kg.',
+    fn: (detalle) => {
+      const UMBRAL = 3000;
+      const m = new Map();
+      for (const r of detalle) {
+        const k = r.mes + '|' + r.sap;
+        const o = m.get(k) || { mes: r.mes, sap: r.sap, venta_directa: r.venta_directa, comuna: r.comuna, patentes: 0, kg: 0, documentos: 0, bajo_umbral: 0 };
+        o.patentes += 1;
+        o.kg += r.kg;
+        o.documentos += r.documentos;
+        if (r.kg < UMBRAL) o.bajo_umbral += 1;
+        m.set(k, o);
+      }
+      return [...m.values()].sort((a, b) => (a.mes < b.mes ? 1 : a.mes > b.mes ? -1 : 0) || b.patentes - a.patentes || b.kg - a.kg);
+    }
+  });
+
+  dash.calc('kpis', {
+    inputs: ['detalle'],
+    title: 'Totales del mes',
+    description: 'Por mes, para todas las ventas directas (vd = todas) y para cada una: ventas directas, patentes distintas, kg, promedio por patente y patentes bajo 3.000 kg.',
+    fn: (detalle) => {
+      const UMBRAL = 3000;
+      const grupos = new Map();
+      for (const r of detalle) {
+        for (const vd of ['todas', r.sap]) {
+          const k = r.mes + '|' + vd;
+          if (!grupos.has(k)) grupos.set(k, { mes: r.mes, vd, filas: [] });
+          grupos.get(k).filas.push(r);
+        }
+      }
+      return [...grupos.values()].map(({ mes, vd, filas }) => {
+        const porPatente = new Map();
+        for (const r of filas) porPatente.set(r.patente, (porPatente.get(r.patente) || 0) + 1);
+        const kg = filas.reduce((s, r) => s + r.kg, 0);
+        return {
+          mes, vd,
+          ventas_directas: new Set(filas.map((r) => r.sap)).size,
+          patentes: porPatente.size,
+          kg,
+          kg_promedio: Math.round(kg / porPatente.size),
+          bajo_umbral: filas.filter((r) => r.kg < UMBRAL).length,
+          compartidas: [...porPatente].filter(([, n]) => n > 1).map(([p]) => p).join(', ') || 'ninguna'
+        };
+      });
+    }
+  });
+
+  dash.calc('periodo', {
+    inputs: ['diario'],
+    title: 'Meses cargados',
+    description: 'Por mes: primer y último día con documentos.',
+    fn: (diario) => {
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const m = new Map();
+      for (const r of diario) {
+        const f = String(r.fecha), mes = f.slice(0, 7);
+        const o = m.get(mes) || { mes, desde: f, hasta: f };
+        if (f < o.desde) o.desde = f;
+        if (f > o.hasta) o.hasta = f;
+        m.set(mes, o);
+      }
+      const txt = (s) => Number(s.slice(8, 10)) + ' de ' + meses[Number(s.slice(5, 7)) - 1];
+      return [...m.values()].sort((a, b) => (a.mes < b.mes ? 1 : -1))
+        .map((o) => ({ ...o, desde_txt: txt(o.desde), hasta_txt: txt(o.hasta), mes_txt: meses[Number(o.mes.slice(5, 7)) - 1] + ' ' + o.mes.slice(0, 4) }));
+    }
+  });
+
+  dash.calc('por_dia', {
+    inputs: ['diario'],
+    title: 'Patentes por día',
+    description: 'Por día, para todas las ventas directas (vd = todas) y para cada una: patentes distintas y kg.',
+    fn: (diario) => {
+      const m = new Map();
+      for (const r of diario) {
+        const f = String(r.fecha);
+        for (const vd of ['todas', String(r.sap)]) {
+          const k = vd + '|' + f;
+          const o = m.get(k) || { vd, mes: f.slice(0, 7), fecha: f, pat: new Set(), kg: 0 };
+          o.pat.add(r.patente);
+          o.kg += Number(r.kg);
+          m.set(k, o);
+        }
+      }
+      return [...m.values()].map((o) => ({ vd: o.vd, mes: o.mes, fecha: o.fecha, patentes: o.pat.size, kg: o.kg }))
+        .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+    }
+  });
+
+  dash.calc('distribucion', {
+    inputs: ['resumen'],
+    title: 'Ventas directas según patentes',
+    description: 'Por mes: cuántas ventas directas usaron 1, 2, 3 o más patentes (vd = todas), y la cantidad de cada una.',
+    fn: (resumen) => {
+      const m = new Map();
+      for (const r of resumen) {
+        for (const vd of ['todas', r.sap]) {
+          const k = r.mes + '|' + vd + '|' + r.patentes;
+          const o = m.get(k) || { mes: r.mes, vd, n_patentes: r.patentes, ventas_directas: 0 };
+          o.ventas_directas += 1;
+          m.set(k, o);
+        }
+      }
+      return [...m.values()].sort((a, b) => a.n_patentes - b.n_patentes);
+    }
+  });
+
+  /* Mix de venta (archivo mix_*.csv: cilindros y kg por mes, patente y formato) */
+  dash.calc('mix_total', {
+    inputs: ['mix'],
+    title: 'Mix del mes',
+    description: 'Por mes, para todas las ventas directas (vd = todas) y para cada una: cilindros, kg y parte de los cilindros de cada formato.',
+    fn: (mix) => {
+      const orden = ['CN05', 'CN11', 'CN15', 'CN45', 'CGH15'];
+      const m = new Map();
+      for (const r of mix) {
+        for (const vd of ['todas', String(r.sap)]) {
+          for (const f of orden) {
+            const k = r.mes + '|' + vd + '|' + f;
+            if (!m.has(k)) m.set(k, { mes: r.mes, vd, formato: f, cilindros: 0, kg: 0 });
+          }
+          const o = m.get(r.mes + '|' + vd + '|' + r.formato);
+          if (!o) continue;
+          o.cilindros += Number(r.cilindros);
+          o.kg += Number(r.kg);
+        }
+      }
+      const tot = new Map();
+      for (const o of m.values()) tot.set(o.mes + '|' + o.vd, (tot.get(o.mes + '|' + o.vd) || 0) + o.cilindros);
+      return [...m.values()].map((o) => {
+        const t = tot.get(o.mes + '|' + o.vd);
+        return { ...o, pct: t ? o.cilindros / t : 0 };
+      });
+    }
+  });
+
+  dash.calc('mix_patente', {
+    inputs: ['mix'],
+    title: 'Mix por patente',
+    description: 'Por mes, venta directa y patente: cilindros, kg y parte de los cilindros de cada formato.',
+    fn: (mix) => {
+      const col = { CN05: '5', CN11: '11', CN15: '15', CN45: '45', CGH15: 'gh' };
+      const m = new Map();
+      for (const r of mix) {
+        const c = col[r.formato];
+        if (!c) continue;
+        const k = r.mes + '|' + r.sap + '|' + r.patente;
+        const o = m.get(k) || { mes: r.mes, sap: String(r.sap), venta_directa: r.venta_directa, patente: r.patente, cilindros: 0, kg: 0,
+          kg_5: 0, kg_11: 0, kg_15: 0, kg_45: 0, kg_gh: 0, cil_5: 0, cil_11: 0, cil_15: 0, cil_45: 0, cil_gh: 0 };
+        o['kg_' + c] += Number(r.kg);
+        o['cil_' + c] += Number(r.cilindros);
+        o.kg += Number(r.kg);
+        o.cilindros += Number(r.cilindros);
+        m.set(k, o);
+      }
+      const rows = [...m.values()];
+      for (const o of rows) for (const c of Object.values(col)) o['pct_' + c] = o.cilindros ? o['cil_' + c] / o.cilindros : 0;
+      const vd = new Map();
+      for (const o of rows) {
+        const k = o.mes + '|' + o.sap;
+        const v = vd.get(k) || { n: 0, kg: 0 };
+        v.n += 1;
+        v.kg += o.kg;
+        vd.set(k, v);
+      }
+      const g = (o) => vd.get(o.mes + '|' + o.sap);
+      return rows.sort((a, b) => (a.mes < b.mes ? 1 : a.mes > b.mes ? -1 : 0) || g(b).n - g(a).n || g(b).kg - g(a).kg
+        || (a.sap < b.sap ? -1 : a.sap > b.sap ? 1 : 0) || b.kg - a.kg);
+    }
+  });
+</script>
+
+<script>
+  /* Utilidades compartidas */
+  window.VD_UMBRAL = 3000;
+  const loc = d3.formatLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['$', ''] });
+  window.vdFmt = loc.format(',d');
+  window.vdPct = loc.format('.1%');
+  window.vdPct0 = loc.format('.0%');
+  window.vdFmtColor = { CN15: dash.colors[0], CN45: dash.colors[1], CGH15: dash.colors[2], CN11: dash.colors[3], CN05: dash.colors[4] };
+  /* Color de texto legible sobre un color de barra */
+  window.vdInk = (color, host) => {
+    const s = document.createElement('span');
+    s.style.color = color;
+    host.appendChild(s);
+    const c = getComputedStyle(s).color;
+    s.remove();
+    const n = (c.match(/-?[\d.]+%?/g) || []).map((v) => (v.endsWith('%') ? parseFloat(v) / 100 : parseFloat(v)));
+    let L;
+    if (/^okl/.test(c)) L = n[0] > 1 ? n[0] / 100 : n[0];
+    else if (/^color\(/.test(c)) L = Math.cbrt(0.2126 * n[0] + 0.7152 * n[1] + 0.0722 * n[2]);
+    else L = Math.cbrt((0.2126 * n[0] + 0.7152 * n[1] + 0.0722 * n[2]) / 255);
+    return L > 0.72 ? '#1b1b1b' : '#ffffff';
+  };
+  window.vdTime = d3.timeFormatLocale({
+    dateTime: '%A %e de %B de %Y', date: '%d-%m-%Y', time: '%H:%M', periods: ['AM', 'PM'],
+    days: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+    shortDays: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
+    months: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+    shortMonths: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic']
+  });
+  /* Mes y venta directa elegidos en los filtros (sin mes elegido: el más reciente de los datos) */
+  window.vdCur = (rows) => {
+    const p = dash.params();
+    let mes = p.mes || '';
+    if (!mes) for (const r of rows || []) if (r.mes && r.mes > mes) mes = r.mes;
+    return { mes, vd: p.vd ? String(p.vd) : '' };
+  };
+  /* Deja el elemento en estado de carga o error. Devuelve true si todos los datos están listos. */
+  window.vdReady = (el, ids) => {
+    const st = ids.map((id) => dash.data(id).status);
+    if (st.every((s) => s === 'ok')) { el.classList.remove('dash-skeleton'); return true; }
+    if (st.some((s) => s === 'error' || s === 'connect' || s === 'declined' || s === 'missing')) {
+      el.classList.remove('dash-skeleton');
+      const f = document.createElement('div');
+      f.className = 'vd-fail';
+      f.textContent = 'Failed to load';
+      el.replaceChildren(f);
+    } else {
+      el.classList.add('dash-skeleton');
+      el.replaceChildren();
+    }
+    return false;
+  };
+  /* Tooltip dentro del gráfico, sin salirse de sus bordes */
+  window.vdTip = (el) => {
+    const tip = document.createElement('div');
+    tip.className = 'vd-tip';
+    tip.hidden = true;
+    el.appendChild(tip);
+    return {
+      show(ev, lines) {
+        tip.replaceChildren(...lines.map(([k, v], i) => {
+          const d = document.createElement('div');
+          const s = document.createElement('span');
+          s.className = i === 0 ? 'vd-tip-k' : 'vd-tip-v';
+          s.textContent = k;
+          d.appendChild(s);
+          if (v != null) { const t = document.createElement('span'); t.className = 'vd-tip-v'; t.textContent = ' ' + v; d.appendChild(t); }
+          return d;
+        }));
+        tip.hidden = false;
+        const r = el.getBoundingClientRect();
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        let x = ev.clientX - r.left + 12, y = ev.clientY - r.top + 12;
+        if (x + w > r.width) x = Math.max(0, ev.clientX - r.left - w - 12);
+        if (y + h > r.height) y = Math.max(0, ev.clientY - r.top - h - 12);
+        tip.style.left = x + 'px';
+        tip.style.top = y + 'px';
+      },
+      hide() { tip.hidden = true; }
+    };
+  };
+</script>
+
+<script>
+  /* Cifras sueltas y umbral */
+  dash.draw('umbral', (el) => { el.textContent = window.vdFmt(window.VD_UMBRAL); });
+  dash.draw('kpi', (el) => {
+    const d = dash.data(el.dataset.source);
+    if (d.status !== 'ok' || !d.data.length) {
+      el.textContent = '—';
+      if (d.status === 'loading') el.classList.add('dash-skeleton'); else el.classList.remove('dash-skeleton');
+      return;
+    }
+    const cur = window.vdCur(d.data);
+    const want = {};
+    for (const k of (el.dataset.keys || '').split(',').filter(Boolean)) want[k] = k === 'vd' ? (cur.vd || 'todas') : cur[k];
+    el.dataset.where = Object.entries(want).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+    const row = d.data.find((r) => Object.entries(want).every(([k, v]) => String(r[k]) === String(v)));
+    el.classList.remove('dash-skeleton');
+    if (!row) { el.textContent = '—'; return; }
+    const v = row[el.dataset.field];
+    el.textContent = typeof v === 'number' ? window.vdFmt(v) : String(v);
+  });
+</script>
+
+<script>
+  /* Filtro de mes (vale para todo el dashboard) */
+  dash.draw('filtro-mes', (sel) => {
+    const d = dash.data('periodo');
+    const meses = d.status === 'ok' ? d.data.slice().sort((a, b) => (a.mes < b.mes ? 1 : -1)) : [];
+    sel.replaceChildren(...meses.map((p) => new Option(p.mes_txt.charAt(0).toUpperCase() + p.mes_txt.slice(1), p.mes)));
+    sel.value = window.vdCur(meses).mes;
+    sel.onchange = () => dash.setParams({ mes: sel.value || null });
+  });
+
+  /* Filtro de venta directa (vale para todo el dashboard) */
+  dash.draw('filtro-vd', (sel) => {
+    const d = dash.data('resumen');
+    const rows = d.status === 'ok' ? d.data : [];
+    const cur = window.vdCur(rows);
+    const vds = new Map();
+    for (const r of rows) if ((r.mes === cur.mes || r.sap === cur.vd) && !vds.has(r.sap)) vds.set(r.sap, r.venta_directa);
+    const opts = [...vds].sort((a, b) => a[1].localeCompare(b[1], 'es'));
+    sel.replaceChildren(new Option('Todas las ventas directas', ''), ...opts.map(([sap, name]) => new Option(name + ' · ' + sap, sap)));
+    sel.value = cur.vd;
+    sel.onchange = () => dash.setParams({ vd: sel.value || null });
+  });
+</script>
+
+<script>
+  /* Patentes con movimiento por día */
+  dash.draw('por-dia', (el) => {
+    if (!window.vdReady(el, ['por_dia', 'periodo'])) return;
+    const todo = dash.data('por_dia').data;
+    const cur = window.vdCur(todo);
+    const per = dash.data('periodo').data.find((p) => p.mes === cur.mes);
+    const rows = todo.filter((r) => r.mes === cur.mes && r.vd === (cur.vd || 'todas')).map((r) => ({ ...r, d: new Date(r.fecha + 'T00:00:00Z') }));
+    if (!per || !rows.length) { el.replaceChildren(); return; }
+    const days = d3.utcDay.range(new Date(per.desde + 'T00:00:00Z'), d3.utcDay.offset(new Date(per.hasta + 'T00:00:00Z'), 1));
+    const W = Math.max(260, el.clientWidth || 400), H = 220;
+    const m = { t: 8, r: 18, b: 24, l: 28 };
+    const x = d3.scaleBand(days.map((d) => d.toISOString().slice(0, 10)), [m.l, W - m.r]).paddingInner(0.25);
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => r.patentes)], [H - m.b, m.t]).nice();
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Patentes con movimiento por día');
+    el.replaceChildren(svg.node());
+    const tip = window.vdTip(el);
+    const yt = y.ticks(4).filter(Number.isInteger);
+    svg.append('g').selectAll('line').data(yt).join('line')
+      .attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).style('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'vd-muted')
+      .attr('x', m.l - 6).attr('y', (t) => y(t) + 4).attr('text-anchor', 'end').text((t) => t);
+    const lbl = window.vdTime.utcFormat('%a %-d %b');
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('class', 'vd-hit')
+      .attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', (r) => y(r.patentes)).attr('height', (r) => y(0) - y(r.patentes))
+      .attr('rx', Math.min(2, x.bandwidth() / 2)).style('fill', dash.colors[0])
+      .on('pointermove', (ev, r) => tip.show(ev, [[lbl(r.d)], [r.patentes + ' patentes'], [window.vdFmt(r.kg) + ' kg']]))
+      .on('pointerleave', () => tip.hide());
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--cds-chart-axis)');
+    const step = x.bandwidth() < 14 ? 7 : 3;
+    const tickDays = days.filter((d, i) => i % step === 0);
+    svg.append('g').selectAll('text').data(tickDays).join('text').attr('class', 'vd-muted')
+      .attr('x', (d) => x(d.toISOString().slice(0, 10)) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle')
+      .text((d) => window.vdTime.utcFormat('%-d %b')(d));
+  });
+</script>
+
+<script>
+  /* Cilindros totales del mes, para todas las ventas directas (vd = todas) y para cada una */
+  dash.calc('cilindros_total', {
+    inputs: ['mix_total'],
+    title: 'Cilindros del mes',
+    description: 'Suma de cilindros y kg de todos los formatos, por mes y venta directa.',
+    fn: (mix_total) => {
+      const m = new Map();
+      for (const r of mix_total) {
+        const k = r.mes + '|' + r.vd;
+        const o = m.get(k) || { mes: r.mes, vd: r.vd, cilindros: 0, kg: 0 };
+        o.cilindros += r.cilindros;
+        o.kg += r.kg;
+        m.set(k, o);
+      }
+      return [...m.values()];
+    }
+  });
+</script>
+
+<script>
+  /* Kilos de cada patente, agrupadas por venta directa, con la línea de 3.000 kg */
+  dash.draw('kg-patentes', (el) => {
+    if (!window.vdReady(el, ['resumen', 'detalle'])) return;
+    const cur = window.vdCur(dash.data('resumen').data);
+    const res = dash.data('resumen').data.filter((r) => r.mes === cur.mes && (!cur.vd || r.sap === cur.vd));
+    const det = dash.data('detalle').data.filter((r) => r.mes === cur.mes && (!cur.vd || r.sap === cur.vd));
+    if (!res.length) { el.replaceChildren(); return; }
+    const U = window.VD_UMBRAL, fmt = window.vdFmt;
+    const W = Math.max(280, el.clientWidth || 600);
+    const top = 22, grpH = 28, rowH = 22, barH = 14;
+    const items = [];
+    let y = top;
+    for (const r of res) {
+      items.push({ grupo: true, y, r });
+      y += grpH;
+      for (const p of det.filter((d) => d.sap === r.sap).sort((a, b) => b.kg - a.kg)) {
+        items.push({ grupo: false, y, r: p });
+        y += rowH;
+      }
+    }
+    const H = y + 4;
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('role', 'img').attr('aria-label', 'Kilos de cada patente por venta directa');
+    el.replaceChildren(svg.node());
+    const tip = window.vdTip(el);
+    const probe = svg.append('text').attr('visibility', 'hidden');
+    const tw = (t, cls) => { probe.attr('class', cls || null).text(t); return probe.node().getComputedTextLength(); };
+    const left = d3.max(det, (d) => tw(d.patente, 'vd-plate-lbl')) + 12;
+    const right = d3.max(det, (d) => tw(fmt(d.kg) + ' kg')) + 10;
+    const x = d3.scaleLinear([0, Math.max(d3.max(det, (d) => d.kg), U * 1.15)], [left, W - right]);
+    const refTxt = fmt(U) + ' kg';
+    svg.append('line').attr('x1', x(U)).attr('x2', x(U)).attr('y1', top - 6).attr('y2', H - 2)
+      .style('stroke', 'var(--cds-chart-reference)').style('stroke-dasharray', '3 3');
+    svg.append('text').attr('class', 'vx-ref').attr('x', x(U)).attr('y', 11).attr('text-anchor', 'middle').text(refTxt);
+    for (const it of items) {
+      const r = it.r;
+      if (it.grupo) {
+        const cnt = r.patentes + (r.patentes === 1 ? ' patente · ' : ' patentes · ') + fmt(r.kg) + ' kg';
+        const cntW = tw(cnt, 'vd-muted');
+        let name = r.venta_directa;
+        if (tw(name, 'vx-grp') > W - cntW - 14) {
+          while (name.length > 4 && tw(name + '…', 'vx-grp') > W - cntW - 14) name = name.slice(0, -1);
+          name += '…';
+        }
+        svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', it.y + 2).attr('y2', it.y + 2).style('stroke', 'var(--cds-chart-grid)');
+        svg.append('text').attr('class', 'vx-grp').attr('x', 0).attr('y', it.y + 19).text(name);
+        svg.append('text').attr('class', 'vd-muted').attr('x', W).attr('y', it.y + 19).attr('text-anchor', 'end').text(cnt);
+        continue;
+      }
+      const bajo = r.kg < U;
+      const g = svg.append('g').attr('transform', `translate(0,${it.y})`);
+      g.append('text').attr('class', 'vd-plate-lbl').attr('x', 0).attr('y', barH - 2).text(r.patente);
+      g.append('rect').attr('class', 'vd-hit').attr('x', left).attr('y', 2).attr('height', barH).attr('rx', 2)
+        .attr('width', Math.max(1, x(r.kg) - left))
+        .style('fill', bajo ? 'var(--cds-chart-status-critical)' : dash.colors[0])
+        .on('pointermove', (ev) => tip.show(ev, [[r.patente + ' · ' + r.venta_directa], [fmt(r.kg) + ' kg', bajo ? '(bajo ' + refTxt + ')' : null], [fmt(r.documentos) + ' documentos · ' + r.dias + ' días']]))
+        .on('pointerleave', () => tip.hide());
+      g.append('text').attr('x', x(r.kg) + 5).attr('y', barH - 2).attr('class', bajo ? 'vd-muted' : null).text(fmt(r.kg) + ' kg');
+    }
+    probe.remove();
+  });
+
+  /* Ventas directas según cantidad de patentes, en una línea */
+  dash.draw('dist-txt', (el) => {
+    const d = dash.data('distribucion');
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const cur = window.vdCur(d.data);
+    const rows = d.data.filter((r) => r.mes === cur.mes && r.vd === (cur.vd || 'todas'));
+    el.textContent = rows.length
+      ? rows.map((r) => r.ventas_directas + ' con ' + r.n_patentes + (r.n_patentes === 1 ? ' patente' : ' patentes')).join(' · ')
+      : '—';
+  });
+</script>
+
+<script>
+  /* Mix de cilindros: barra al 100% y tabla por formato */
+  window.vdFormatos = [['CN05', '5 kg'], ['CN11', '11 kg'], ['CN15', '15 kg'], ['CN45', '45 kg'], ['CGH15', '15 kg grúa horquilla']];
+  dash.draw('mix-barra', (el) => {
+    if (!window.vdReady(el, ['mix_total'])) return;
+    const todo = dash.data('mix_total').data;
+    const cur = window.vdCur(todo);
+    const vd = cur.vd || 'todas';
+    const rows = window.vdFormatos.map(([f, label]) => ({ label, f, r: todo.find((t) => t.mes === cur.mes && t.vd === vd && t.formato === f) })).filter((o) => o.r);
+    if (!rows.length || !d3.sum(rows, (o) => o.r.cilindros)) { el.replaceChildren(); return; }
+    const W = Math.max(240, el.clientWidth || 320), H = 34;
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Mix de cilindros');
+    el.replaceChildren(svg.node());
+    const tip = window.vdTip(el);
+    const x = d3.scaleLinear([0, 1], [0, W]);
+    const probe = svg.append('text').attr('visibility', 'hidden').attr('class', 'vd-in');
+    let acc = 0;
+    for (const { label, f, r } of rows) {
+      if (!r.pct) continue;
+      const x0 = x(acc), w = x(acc + r.pct) - x0;
+      svg.append('rect').attr('class', 'vd-hit').attr('x', x0).attr('y', 4).attr('width', Math.max(0.5, w - 1)).attr('height', 26)
+        .style('fill', window.vdFmtColor[f])
+        .on('pointermove', (ev) => tip.show(ev, [[label], [window.vdPct(r.pct) + ' de los cilindros'], [window.vdFmt(r.cilindros) + ' cilindros · ' + window.vdFmt(r.kg) + ' kg']]))
+        .on('pointerleave', () => tip.hide());
+      const t = window.vdPct0(r.pct);
+      probe.text(t);
+      if (probe.node().getComputedTextLength() + 6 < w - 1) {
+        svg.append('text').attr('class', 'vd-in').attr('x', x0 + (w - 1) / 2).attr('y', 22).attr('text-anchor', 'middle')
+          .style('fill', window.vdInk(window.vdFmtColor[f], el)).text(t);
+      }
+      acc += r.pct;
+    }
+    probe.remove();
+  });
+  dash.draw('mix-tabla', (tb) => {
+    const d = dash.data('mix_total');
+    if (d.status !== 'ok') { tb.replaceChildren(); return; }
+    const cur = window.vdCur(d.data);
+    const vd = cur.vd || 'todas';
+    const td = (text, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = text; return c; };
+    tb.replaceChildren(...window.vdFormatos.map(([f, label]) => {
+      const r = d.data.find((t) => t.mes === cur.mes && t.vd === vd && t.formato === f);
+      if (!r) return null;
+      const tr = document.createElement('tr');
+      tr.dataset.key = [r.mes, r.vd, r.formato].map(encodeURIComponent).join(',');
+      const c = td('', 'vx-fmt');
+      const sw = document.createElement('i');
+      sw.className = 'vd-sw';
+      sw.style.background = window.vdFmtColor[f];
+      c.append(sw, document.createTextNode(label));
+      tr.append(c, td(window.vdFmt(r.cilindros), 'vd-num'), td(window.vdPct(r.pct), 'vd-num'), td(window.vdFmt(r.kg), 'vd-num'));
+      return tr;
+    }).filter(Boolean));
+  });
+</script>
+
+<script>
+  /* Tabla única por patente: kilos con marca de 3.000 kg, cilindros con su mix y cilindros por formato */
+  window.vdSort = { key: 'kg', dir: 'descending' };
+  dash.draw('ranking', (tb) => {
+    const d = dash.data('detalle');
+    const mx = dash.data('mix_patente');
+    if (d.status !== 'ok') { tb.replaceChildren(); return; }
+    const U = window.VD_UMBRAL, fmt = window.vdFmt;
+    const cur = window.vdCur(d.data);
+    const mixPor = new Map((mx.status === 'ok' ? mx.data : []).map((r) => [r.mes + '|' + r.sap + '|' + r.patente, r]));
+    const cols = ['5', '11', '15', '45', 'gh'];
+    const codigos = { '5': 'CN05', '11': 'CN11', '15': 'CN15', '45': 'CN45', gh: 'CGH15' };
+    let q = '';
+    document.querySelectorAll('#vd-buscar').forEach((i) => { q = i.value.trim().toLowerCase(); });
+    const delMes = d.data.filter((r) => r.mes === cur.mes && (!cur.vd || r.sap === cur.vd)).map((r) => {
+      const m = mixPor.get(r.mes + '|' + r.sap + '|' + r.patente) || {};
+      const o = { ...r, cilindros: m.cilindros || 0 };
+      for (const c of cols) o['cil_' + c] = m['cil_' + c] || 0;
+      return o;
+    });
+    const { key, dir } = window.vdSort;
+    const txt = key === 'patente' || key === 'venta_directa';
+    const rows = delMes
+      .filter((r) => !q || [r.venta_directa, r.sap, r.patente, r.comuna].join(' ').toLowerCase().includes(q))
+      .sort((a, b) => {
+        const c = txt ? String(a[key]).localeCompare(String(b[key]), 'es') : a[key] - b[key];
+        return dir === 'ascending' ? c : -c;
+      });
+    const maxKg = Math.max(d3.max(delMes, (r) => r.kg) || 1, U * 1.15);
+    const td = (text, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = text; return c; };
+    tb.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = [r.mes, r.sap, r.patente].map(encodeURIComponent).join(',');
+      if (r.kg < U) tr.className = 'is-bajo';
+      const kg = td('', 'vd-num vx-kgcell');
+      const bar = document.createElement('span');
+      bar.className = 'vx-bar';
+      const fill = document.createElement('span');
+      fill.className = 'vx-bar-fill';
+      fill.style.width = (100 * r.kg / maxKg).toFixed(1) + '%';
+      const tick = document.createElement('span');
+      tick.className = 'vx-bar-tick';
+      tick.style.left = 'calc(' + (100 * U / maxKg).toFixed(1) + '% - 1px)';
+      bar.append(fill, tick);
+      kg.append(bar, document.createTextNode(fmt(r.kg)));
+      const cil = td('', 'vd-num');
+      const mini = document.createElement('span');
+      mini.className = 'vx-mini';
+      for (const c of cols) {
+        if (!r['cil_' + c] || !r.cilindros) continue;
+        const s = document.createElement('span');
+        s.style.width = (100 * r['cil_' + c] / r.cilindros).toFixed(1) + '%';
+        s.style.background = window.vdFmtColor[codigos[c]];
+        mini.appendChild(s);
+      }
+      cil.append(mini, document.createTextNode(fmt(r.cilindros)));
+      tr.append(
+        td(r.patente, 'vd-plate'),
+        td(r.venta_directa, 'vd-name'),
+        kg,
+        cil,
+        ...cols.map((c) => td(fmt(r['cil_' + c]), 'vd-num vd-hide-sm' + (r['cil_' + c] === 0 ? ' vd-zero' : ''))),
+        td(String(r.dias), 'vd-num vd-hide-sm')
+      );
+      return tr;
+    }));
+  });
+  document.querySelectorAll('.vx-rank th button[data-sort]').forEach((b) => {
+    b.addEventListener('click', () => {
+      const key = b.dataset.sort;
+      const cur = window.vdSort;
+      const txt = key === 'patente' || key === 'venta_directa';
+      const dir = cur.key === key ? (cur.dir === 'descending' ? 'ascending' : 'descending') : (txt ? 'ascending' : 'descending');
+      window.vdSort = { key, dir };
+      b.closest('table').querySelectorAll('th').forEach((th) => th.setAttribute('aria-sort', th.contains(b) ? dir : 'none'));
+      dash.draw('ranking');
+    });
+  });
+  document.querySelectorAll('#vd-buscar').forEach((i) => i.addEventListener('input', () => dash.draw('ranking')));
+  /* Muestras de color de cada formato */
+  document.querySelectorAll('.vd-sw[data-fmt]').forEach((s) => { s.style.background = window.vdFmtColor[s.dataset.fmt]; });
+</script>
+
+<p class="pie">Datos de los archivos VD que envía Juan P. León: octubre completo (VD_31-10-2026v2) y noviembre del 2 al 14 (VD_15-11-2026). Kilos = columna TOTAL; cilindros = suma de los formatos CN05, CN11, CN15, CN45 y CGH15. Generado el 18-11-2026.</p>
+</main>
+<script>
+  dash._runAll();
+  let anchoVentana = window.innerWidth, espera;
+  window.addEventListener('resize', () => {
+    if (window.innerWidth === anchoVentana) return;
+    anchoVentana = window.innerWidth;
+    clearTimeout(espera);
+    espera = setTimeout(() => dash._runAll(), 150);
+  });
+</script>
+</body>
+</html>
