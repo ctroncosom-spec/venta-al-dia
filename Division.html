@@ -286,32 +286,32 @@ html,body{margin:0;background:var(--color-bg)}
     <div class="ad-kpi" id="kpi-alerta">
       <p class="ad-kpi-label">Ventas directas sobre el límite</p>
       <p class="ad-kpi-value"><span class="ad-hot" data-draw="k-alerta" data-source="canal" data-field="n_alerta">—</span><small>de <span data-draw="t-nvd" data-source="canal" data-field="n_vd">—</span></small></p>
-      <p class="ad-kpi-sub"><span data-draw="k-alerta-dif" data-source="canal" data-field="dif_alerta">—</span> vs período anterior · <span data-draw="k-critico" data-source="canal" data-field="n_critico">—</span> en nivel crítico</p>
+      <p class="ad-kpi-sub"><span data-draw="k-alerta-dif" data-source="canal" data-field="dif_alerta">—</span> vs <span data-draw="k-ant">—</span> · <span data-draw="k-critico" data-source="canal" data-field="n_critico">—</span> en nivel crítico</p>
     </div>
     <div class="ad-kpi" id="kpi-comercial">
       <p class="ad-kpi-label">Venta a clientes comerciales</p>
       <p class="ad-kpi-value"><span data-draw="k-com" data-source="canal" data-field="comercial">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><span class="ad-nw"><span data-draw="k-com-dif" data-source="canal" data-field="dif_com">—</span> kg</span> vs período anterior</p>
+      <p class="ad-kpi-sub"><span class="ad-nw"><span data-draw="k-com-dif" data-source="canal" data-field="dif_com_aa">—</span> kg</span> <span class="ad-nw">(<span data-draw="k-com-var" data-source="canal" data-field="var_com_aa">—</span>)</span> vs <span data-draw="k-aa">—</span></p>
     </div>
     <div class="ad-kpi" id="kpi-pct">
       <p class="ad-kpi-label">% de venta a clientes comerciales</p>
       <p class="ad-kpi-value"><span data-draw="k-pct" data-source="canal" data-field="pct">—</span></p>
-      <p class="ad-kpi-sub"><span data-draw="k-pct-dif" data-source="canal" data-field="dif_pp">—</span> pp vs mismo período del año anterior · límite <span data-draw="r-limite" data-source="reglas" data-field="valor" data-where="regla=limite">—</span></p>
+      <p class="ad-kpi-sub"><span data-draw="k-pct-dif" data-source="canal" data-field="dif_pp">—</span> pp vs <span data-draw="k-aa">—</span> · límite <span data-draw="r-limite" data-source="reglas" data-field="valor" data-where="regla=limite">—</span></p>
     </div>
     <div class="ad-kpi" id="kpi-residencial">
       <p class="ad-kpi-label">Venta a clientes residenciales, sin vales</p>
       <p class="ad-kpi-value"><span data-draw="k-res" data-source="canal" data-field="residencial">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><span class="ad-pct" data-draw="k-res-pct" data-source="canal" data-field="pct_residencial">—</span> de la venta total · <span class="ad-nw"><span data-draw="k-res-dif" data-source="canal" data-field="dif_res">—</span> kg</span> vs período anterior</p>
+      <p class="ad-kpi-sub"><span class="ad-pct" data-draw="k-res-pct" data-source="canal" data-field="pct_residencial">—</span> de la venta total · <span class="ad-nw"><span data-draw="k-res-dif" data-source="canal" data-field="dif_res_aa">—</span> kg</span> <span class="ad-nw">(<span data-draw="k-res-var" data-source="canal" data-field="var_res_aa">—</span>)</span> vs <span data-draw="k-aa">—</span></p>
     </div>
     <div class="ad-kpi" id="kpi-vales">
       <p class="ad-kpi-label">Venta con vales</p>
       <p class="ad-kpi-value"><span data-draw="k-vales" data-source="canal" data-field="vales">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><span class="ad-pct" data-draw="k-vales-pct" data-source="canal" data-field="pct_vales">—</span> de la venta total · <span class="ad-nw"><span data-draw="k-vales-dif" data-source="canal" data-field="dif_vales">—</span> kg</span> vs período anterior</p>
+      <p class="ad-kpi-sub"><span class="ad-pct" data-draw="k-vales-pct" data-source="canal" data-field="pct_vales">—</span> de la venta total · <span class="ad-nw"><span data-draw="k-vales-dif" data-source="canal" data-field="dif_vales_aa">—</span> kg</span> <span class="ad-nw">(<span data-draw="k-vales-var" data-source="canal" data-field="var_vales_aa">—</span>)</span> vs <span data-draw="k-aa">—</span></p>
     </div>
     <div class="ad-kpi" id="kpi-total">
       <p class="ad-kpi-label">Venta total</p>
       <p class="ad-kpi-value"><span data-draw="k-total" data-source="canal" data-field="total">—</span><small>kg</small></p>
-      <p class="ad-kpi-sub"><span class="ad-nw"><span data-draw="k-total-dif" data-source="canal" data-field="dif_total">—</span> kg</span> vs período anterior · <span data-draw="k-total-aa" data-source="canal" data-field="var_total_aa">—</span> vs mismo período del año anterior</p>
+      <p class="ad-kpi-sub"><span class="ad-nw"><span data-draw="k-total-dif" data-source="canal" data-field="dif_total_aa">—</span> kg</span> <span class="ad-nw">(<span data-draw="k-total-aa" data-source="canal" data-field="var_total_aa">—</span>)</span> vs <span data-draw="k-aa">—</span></p>
     </div>
   </section>
 
@@ -375,7 +375,7 @@ html,body{margin:0;background:var(--color-bg)}
     <div class="ad-stats">
       <div class="ad-stat"><span>Nivel en el período</span><strong data-draw="f-nivel" data-source="tablero" data-field="nivel">—</strong></div>
       <div class="ad-stat"><span>A clientes comerciales</span><strong data-draw="f-pct" data-source="tablero" data-field="pct">—</strong></div>
-      <div class="ad-stat"><span>vs mismo período año anterior</span><strong><span data-draw="f-dif" data-source="tablero" data-field="dif_pp">—</span> pp</strong></div>
+      <div class="ad-stat"><span>vs <span data-draw="k-aa">—</span></span><strong><span data-draw="f-dif" data-source="tablero" data-field="dif_pp">—</span> pp</strong></div>
       <div class="ad-stat"><span>Meses sobre el límite (12)</span><strong data-draw="f-meses" data-source="tablero" data-field="meses_alerta_12">—</strong></div>
       <div class="ad-stat"><span>Meses seguidos sobre el límite</span><strong data-draw="f-racha" data-source="tablero" data-field="racha">—</strong></div>
       <div class="ad-stat"><span>Kg comerciales / venta total</span><strong><span data-draw="f-com" data-source="tablero" data-field="comercial">—</span> / <span data-draw="f-total" data-source="tablero" data-field="total">—</span></strong></div>
@@ -862,6 +862,14 @@ window.AD = (() => {
       dif_res: cp ? (c.total - c.comercial - c.vales) - (cp.total - cp.comercial - cp.vales) : null,
       pct_vales: c.total ? c.vales / c.total : null,
       dif_vales: cp ? c.vales - cp.vales : null,
+      // Contra el mismo período del año anterior: kilos de diferencia y variación.
+      dif_com_aa: ca ? c.comercial - ca.comercial : null,
+      var_com_aa: ca && ca.comercial ? c.comercial / ca.comercial - 1 : null,
+      dif_res_aa: ca ? (c.total - c.comercial - c.vales) - (ca.total - ca.comercial - ca.vales) : null,
+      var_res_aa: ca && ca.total - ca.comercial - ca.vales > 0 ? (c.total - c.comercial - c.vales) / (ca.total - ca.comercial - ca.vales) - 1 : null,
+      dif_vales_aa: ca ? c.vales - ca.vales : null,
+      var_vales_aa: ca && ca.vales ? c.vales / ca.vales - 1 : null,
+      dif_total_aa: ca ? c.total - ca.total : null,
       var_total_aa: ca && ca.total ? c.total / ca.total - 1 : null,
       dif_pp: ca && c.pct != null && ca.pct != null ? (c.pct - ca.pct) * 100 : null,
     };
@@ -1098,7 +1106,7 @@ dash.calc('cuota', {
 
 dash.calc('canal', {
   title: 'Resumen por mes',
-  description: 'Por mes, para todas las ventas directas de la región y comuna elegidas juntas y para cada una: cuántas quedan en cada nivel, kilos comerciales, kilos residenciales sin vales (venta total menos comercial y menos vales), kilos vendidos con vales, kilos sobre el límite y cambios contra el mes anterior y el año anterior.',
+  description: 'Por mes, para todas las ventas directas de la región y comuna elegidas juntas y para cada una: cuántas quedan en cada nivel, kilos comerciales, kilos residenciales sin vales (venta total menos comercial y menos vales), kilos vendidos con vales, kilos sobre el límite, cambios contra el mes anterior y kilos y variación de cada venta contra el mismo mes del año anterior.',
   inputs: ['cuota', 'comercial_vd', 'vd_zona'],
   fn: (cuota, comercial_vd, vd_zona) => {
     const p = dash.params(), regiones = new Set(vd_zona.map((z) => z.region));
@@ -1155,6 +1163,15 @@ dash.calc('canal', {
         const aa = rows.find((x) => x.mes === Number(o.mes.slice(0, 4)) - 1 + o.mes.slice(4));
         o.pct_aa = aa && aa.con_kilos && aa.total ? aa.comercial / aa.total : null;
         o.dif_pp = o.pct != null && o.pct_aa != null ? (o.pct - o.pct_aa) * 100 : null;
+        const hayAA = o.con_kilos && aa && aa.con_kilos;
+        const vr = (a, b) => (hayAA && b > 0 ? a / b - 1 : null);
+        o.dif_com_aa = hayAA ? o.comercial - aa.comercial : null;
+        o.var_com_aa = vr(o.comercial, aa && aa.comercial);
+        o.dif_res_aa = hayAA ? o.residencial - aa.residencial : null;
+        o.var_res_aa = vr(o.residencial, aa && aa.residencial);
+        o.dif_vales_aa = hayAA ? o.vales - aa.vales : null;
+        o.var_vales_aa = vr(o.vales, aa && aa.vales);
+        o.dif_total_aa = hayAA ? o.total - aa.total : null;
         o.var_total_aa = o.con_kilos && aa && aa.con_kilos && aa.total ? o.total / aa.total - 1 : null;
       });
       out.push(...rows);
@@ -1466,9 +1483,12 @@ dash.calc('maestro_vd', {
   per('k-alerta-dif', (r) => AD.sgn(r.dif_alerta, AD.n0), (r) => r.dif_alerta);
   per('k-exceso-dif', (r) => AD.sgn(r.dif_exceso, AD.n0), (r) => r.dif_exceso);
   per('k-pct', (r) => AD.pct(r.pct), (r) => (r.pct > AD.regla('limite') ? 1 : 0));
-  per('k-com-dif', (r) => AD.sgn(r.dif_com, AD.n0));
-  per('k-total-dif', (r) => AD.sgn(r.dif_total, AD.n0), (r) => -r.dif_total);
-  per('k-total-aa', (r) => (r.var_total_aa == null ? '—' : AD.sgn(r.var_total_aa * 100, AD.dec1) + ' %'), (r) => -r.var_total_aa);
+  // Venta comercial, residencial, con vales y total: siempre contra el mismo período del año anterior.
+  const varAA = (v) => (v == null ? '—' : AD.sgn(v * 100, AD.dec1) + ' %');
+  per('k-com-dif', (r) => AD.sgn(r.dif_com_aa, AD.n0));
+  per('k-com-var', (r) => varAA(r.var_com_aa));
+  per('k-total-dif', (r) => AD.sgn(r.dif_total_aa, AD.n0), (r) => -r.dif_total_aa);
+  per('k-total-aa', (r) => varAA(r.var_total_aa), (r) => -r.var_total_aa);
   per('k-pct-dif', (r) => AD.sgn(r.dif_pp, AD.dec1), (r) => r.dif_pp);
   per('k-share', (r) => AD.pct(r.share_alerta));
   per('k-com-alerta', (r) => AD.n0(r.comercial_alerta));
@@ -1476,10 +1496,20 @@ dash.calc('maestro_vd', {
   per('k-total', (r) => AD.n0(r.total));
   per('k-res', (r) => AD.n0(r.residencial));
   per('k-res-pct', (r) => AD.pct(r.pct_residencial));
-  per('k-res-dif', (r) => AD.sgn(r.dif_res, AD.n0), (r) => -r.dif_res);
+  per('k-res-dif', (r) => AD.sgn(r.dif_res_aa, AD.n0), (r) => -r.dif_res_aa);
+  per('k-res-var', (r) => varAA(r.var_res_aa), (r) => -r.var_res_aa);
+  // Meses contra los que se compara: el período anterior del mismo largo y el mismo período del año anterior.
+  const cmp = (name, f, sinDato) => dash.draw(name, (el) => {
+    if (AD.wait(el, BASE)) return;
+    const r = AD.rango(), x = r.length ? f(r) : null;
+    el.textContent = x ? AD.etiqueta(x) : sinDato;
+  });
+  cmp('k-ant', AD.anterior, 'período anterior');
+  cmp('k-aa', AD.anioAntes, 'mismo período del año anterior');
   per('k-vales', (r) => AD.n0(r.vales));
   per('k-vales-pct', (r) => AD.pct(r.pct_vales));
-  per('k-vales-dif', (r) => AD.sgn(r.dif_vales, AD.n0));
+  per('k-vales-dif', (r) => AD.sgn(r.dif_vales_aa, AD.n0));
+  per('k-vales-var', (r) => varAA(r.var_vales_aa));
   per('t-vd', (r) => r.grupo);
   per('t-vd-pct', (r) => AD.pct(r.pct), alto);
   per('t-vd-nivel', (r) => r.nivel || 'sin venta', alto);
