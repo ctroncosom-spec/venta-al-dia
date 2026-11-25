@@ -81,6 +81,7 @@ html,body{margin:0;background:var(--color-bg)}
 .ad .ad-pill-normal{color:var(--color-fg-muted);box-shadow:inset 0 0 0 1px var(--color-border-line)}
 .ad .ad-scroll{position:relative;overflow:auto;max-height:30rem;border-top:1px solid var(--color-border-line)}
 .ad .ad-scroll.ad-tall{max-height:34rem}
+.ad .ad-mas td{text-align:center;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);cursor:pointer}
 .ad .ad-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .ad .ad-table th{position:sticky;top:0;z-index:1;background:var(--color-panel);text-align:left;font-weight:var(--cds-font-weight-medium);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);padding:var(--cds-pad-sm);border-bottom:1px solid var(--color-border-line);white-space:nowrap;vertical-align:bottom}
 .ad .ad-table td{padding:var(--cds-pad-sm);border-bottom:1px solid var(--color-border-line);vertical-align:middle}
@@ -655,12 +656,25 @@ html,body{margin:0;background:var(--color-bg)}
       try { fn(el); } catch (e) { console.error('dibujo', name, e); }
     });
   };
+  // Un solo recorrido: se buscan una vez todos los elementos con dibujo y se dibujan los visibles.
+  // Después se dibujan solo los que estaban ocultos y quedaron a la vista.
   const todo = () => {
     pendiente = false;
     onDatas.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
-    Object.keys(draws).forEach(correr);
+    const porNombre = new Map();
+    document.querySelectorAll('[data-draw]').forEach((el) => {
+      const n = el.dataset.draw;
+      if (!porNombre.has(n)) porNombre.set(n, []);
+      porNombre.get(n).push(el);
+    });
+    const ocultos = [];
+    const uno = (name, el) => { try { draws[name](el); } catch (e) { console.error('dibujo', name, e); } };
+    Object.keys(draws).forEach((name) => (porNombre.get(name) || []).forEach((el) => {
+      if (!el.isConnected) return;
+      if (visible(el)) uno(name, el); else ocultos.push([name, el]);
+    }));
     onDatas.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
-    Object.keys(draws).forEach(correr);
+    ocultos.forEach(([name, el]) => { if (el.isConnected && visible(el)) uno(name, el); });
   };
   const programar = () => { if (!pendiente && listo) { pendiente = true; requestAnimationFrame(todo); } };
   window.dash = {
@@ -713,6 +727,28 @@ window.AD = (() => {
   // Sin datos listos devuelve siempre el mismo arreglo vacío, para que la memoria de cálculos no se reinicie en cada llamada.
   const VACIO = [];
   const rows = (id) => { const d = dash.data(id); return d.status === 'ok' && Array.isArray(d.data) ? d.data : VACIO; };
+  // ---------- Memoria de resultados ----------
+  // Guarda el último resultado de cada nombre y lo reutiliza mientras sus dependencias sean las mismas (===).
+  const ultimos = new Map();
+  const recordar = (name, deps, fn) => {
+    const o = ultimos.get(name);
+    if (o && o.deps.length === deps.length && o.deps.every((x, i) => x === deps[i])) return o.v;
+    const v = fn();
+    ultimos.set(name, {deps, v});
+    return v;
+  };
+  // Filas de un conjunto de datos agrupadas por una columna (por ejemplo, por cliente), en su orden original.
+  const indice = (id, col) => recordar('idx|' + id + '|' + col, [rows(id)], () => {
+    const M = new Map();
+    rows(id).forEach((r) => {
+      const k = String(r[col]), a = M.get(k);
+      if (a) a.push(r); else M.set(k, [r]);
+    });
+    return M;
+  });
+  const de = (id, col, v) => indice(id, col).get(String(v)) || VACIO;
+  // Comparación de textos en español (mucho más rápida que localeCompare en listas largas).
+  const ES = new Intl.Collator('es'), ESN = new Intl.Collator('es', {numeric: true});
   const regla = (name) => {
     const r = rows('reglas').find((x) => x.regla === name);
     return r ? Number(r.valor) : null;
@@ -720,9 +756,11 @@ window.AD = (() => {
   // ---------- Región y comuna del filtro general ----------
   const zona = () => {
     const zs = rows('vd_zona'), p = dash.params();
-    const region = zs.some((z) => z.region === p.region) ? p.region : '';
-    const comuna = region && zs.some((z) => z.region === region && z.comuna === p.comuna) ? p.comuna : '';
-    return {region, comuna};
+    return recordar('zona', [zs, p.region, p.comuna], () => {
+      const region = zs.some((z) => z.region === p.region) ? p.region : '';
+      const comuna = region && zs.some((z) => z.region === region && z.comuna === p.comuna) ? p.comuna : '';
+      return {region, comuna};
+    });
   };
   let zMemo = {ref: null, key: null, set: null};
   const zonaSet = () => {
@@ -736,7 +774,11 @@ window.AD = (() => {
   // ¿La venta directa está en la región y comuna elegidas? Sin región elegida, todas lo están.
   const enZona = (v) => !zona().region || zonaSet().has(v);
   // Para una lista «A · B»: ¿alguna está en la zona?
-  const algunaEnZona = (txt) => !zona().region || String(txt || '').split(' · ').some((v) => zonaSet().has(v));
+  const algunaEnZona = (txt) => {
+    if (!zona().region) return true;
+    const set = zonaSet();
+    return String(txt || '').split(' · ').some((v) => set.has(v));
+  };
   const regionNombre = (r) => { const z = rows('vd_zona').find((x) => x.region === r); return z ? z.region_nombre : r; };
   const ROMANO = ['VI', 'VII', 'VIII', 'XVI'];
   const todasRegiones = () => {
@@ -876,18 +918,17 @@ window.AD = (() => {
   };
   // Clientes por venta directa de la zona en el período; las señales son las de los 12 meses que terminan en «hasta».
   const pares = (r = rango()) => memoize('p|' + zonaKey() + '|' + r.join(','), () => {
-    const set = new Set(r), h = r[r.length - 1], P = new Map();
-    rows('clientes').forEach((x) => {
-      if (!set.has(x.mes) || !(x.kilos_mes > 0) || !enZona(x.vendedor)) return;
+    const h = r[r.length - 1], P = new Map(), zs = zona().region ? zonaSet() : null;
+    r.forEach((m) => de('clientes', 'mes', m).forEach((x) => {
+      if (!(x.kilos_mes > 0) || (zs && !zs.has(x.vendedor))) return;
       const k = x.vendedor + '|' + x.cliente_id;
       const o = P.get(k) || {vendedor: x.vendedor, cliente_id: x.cliente_id, cliente: x.cliente, tipo: x.tipo, mes: h, kilos_p: 0, pedidos_p: 0, kilos: null, senales: '', n_senales: 0,
         descuento: x.descuento, descuento_min: x.descuento_min, formatos_descuento: x.formatos_descuento};
       o.kilos_p += x.kilos_mes;
       o.pedidos_p += x.pedidos_mes;
       P.set(k, o);
-    });
-    rows('clientes').forEach((x) => {
-      if (x.mes !== h) return;
+    }));
+    de('clientes', 'mes', h).forEach((x) => {
       const o = P.get(x.vendedor + '|' + x.cliente_id);
       if (o) { o.kilos = x.kilos; o.senales = x.senales; o.n_senales = x.n_senales; }
     });
@@ -904,7 +945,7 @@ window.AD = (() => {
   });
   const clientesP = (r = rango()) => memoize('cl|' + zonaKey() + '|' + r.join(','), () => {
     const h = r[r.length - 1];
-    const T = new Map(rows('clientes_total').filter((x) => x.mes === h).map((x) => [x.cliente_id, x]));
+    const T = new Map(de('clientes_total', 'mes', h).map((x) => [x.cliente_id, x]));
     const C = new Map();
     pares(r).forEach((o) => {
       const c = C.get(o.cliente_id) || {cliente_id: o.cliente_id, cliente: o.cliente, tipo: o.tipo, mes: h, n_vd_p: 0, kilos_p: 0, pedidos_p: 0, vds: [],
@@ -939,6 +980,50 @@ window.AD = (() => {
       nivel: c.pct > lim ? (m12 >= per ? 'Crítico' : 'Alerta') : c.pct > vig ? 'Vigilancia' : 'Normal',
     };
   };
+  // ---------- Tablas largas por partes ----------
+  // La drawing crea las primeras filas; al acercarse al final del recuadro con scroll vuelve a llamarse y agrega las siguientes.
+  // Si la lista y la firma (búsqueda, orden) no cambiaron, no vuelve a crear las filas: solo marca la fila elegida.
+  const PARTE = 150;
+  const partes = (tb, lista, fila, o = {}) => {
+    const box = tb.closest('.ad-scroll');
+    if (box && !box.__partes) {
+      box.__partes = true;
+      const pedir = () => {
+        const t = box.querySelector('tbody[data-draw]'), p = t && t.__p;
+        if (p && p.n < p.lista.length && box.scrollTop + box.clientHeight >= box.scrollHeight - 600) { p.mas = true; dash.draw(t.dataset.draw); }
+      };
+      box.addEventListener('scroll', pedir, {passive: true});
+    }
+    let p = tb.__p;
+    const nueva = !p || p.lista !== lista || p.firma !== o.firma || tb.firstElementChild !== p.primera;
+    if (nueva) {
+      p = tb.__p = {lista, firma: o.firma, n: 0, primera: null, mas: false, sel: o.sel};
+      tb.replaceChildren();
+      if (box && box.scrollTop) box.scrollTop = 0;
+    } else if (o.sel !== p.sel) {
+      p.sel = o.sel;
+      tb.querySelectorAll(':scope > tr[data-key]').forEach((tr) => { tr.classList.toggle('is-sel', tr.dataset.key === o.sel); });
+    }
+    const hasta = Math.min(lista.length, nueva ? PARTE : p.mas ? p.n + PARTE : p.n);
+    p.mas = false;
+    if (hasta > p.n) {
+      tb.querySelectorAll(':scope > tr.ad-mas').forEach((x) => x.remove());
+      const frag = document.createDocumentFragment();
+      for (let i = p.n; i < hasta; i++) frag.appendChild(fila(lista[i], i));
+      tb.appendChild(frag);
+      p.n = hasta;
+      p.primera = tb.firstElementChild;
+      if (p.n < lista.length) {
+        const tr = document.createElement('tr'), td = document.createElement('td');
+        tr.className = 'ad-mas';
+        td.colSpan = o.cols || 12;
+        td.textContent = 'Mostrando ' + n0(p.n) + ' de ' + n0(lista.length) + ' · baja para ver más';
+        tr.appendChild(td);
+        tr.addEventListener('click', () => { p.mas = true; dash.draw(tb.dataset.draw); });
+        tb.appendChild(tr);
+      }
+    }
+  };
   const enc = (s) => encodeURIComponent(String(s));
   const where = (o) => Object.entries(o).map(([k, v]) => enc(k) + '=' + enc(v)).join('&');
   const fail = () => {
@@ -953,6 +1038,7 @@ window.AD = (() => {
       el.classList.remove('dash-skeleton');
       return false;
     }
+    el.__p = null;
     if (failed(...ids)) {
       el.classList.remove('dash-skeleton');
       if (blank) el.replaceChildren(); else el.replaceChildren(fail());
@@ -1040,6 +1126,7 @@ window.AD = (() => {
     : '—');
   const fecha = (s) => (s ? s.slice(8, 10) + '-' + s.slice(5, 7) + '-' + s.slice(0, 4) : '—');
   return {MES, MC, n0, pct, dec1, sgn, mesCorto, mesLargo, ok, rows, regla, meses, mes, vd, enc, where, wait, pill, chips, tip, measure, go, filtro, enFiltro, fichaFila, serieTotal, rango, desde, etiqueta, anterior, anioAntes, evalVD, evalCanal, resumen, pares, clientesP, descTxt, fecha,
+    recordar, de, ES, ESN, partes, zonaKey,
     zona, zonaSet, enZona, algunaEnZona, zonaTxt, regionNombre, todasRegiones, senal: null};
 })();
 
@@ -1939,8 +2026,11 @@ dash.draw('heatmap', (el) => {
   // Filas de «Clientes comerciales», iguales en la tabla y en el Excel descargado.
   const filasClientes = () => {
     const v = AD.vd();
+    return AD.recordar('f-clientes', [v, v ? AD.pares() : AD.clientesP()], () => filasClientes0(v));
+  };
+  const filasClientes0 = (v) => {
     if (!v) {
-      const cs = AD.clientesP().sort((a, b) => b.kilos_p - a.kilos_p), tot = cs.reduce((a, c) => a + c.kilos_p, 0);
+      const cs = AD.clientesP().slice().sort((a, b) => b.kilos_p - a.kilos_p), tot = cs.reduce((a, c) => a + c.kilos_p, 0);
       return cs.map((c) => ({...c, share: tot ? c.kilos_p / tot : null}));
     }
     return AD.pares().filter((o) => o.vendedor === v).sort((a, b) => b.kilos_p - a.kilos_p).map((o) => ({...o, share: o.share_p, ventas_directas: o.vendedor}));
@@ -1951,7 +2041,7 @@ dash.draw('heatmap', (el) => {
     const v = AD.vd();
     if (!v) {
       const cs = filasClientes();
-      tb.replaceChildren(...cs.map((c) => {
+      AD.partes(tb, cs, (c) => {
         const tr = document.createElement('tr');
         tr.dataset.key = AD.enc(c.cliente_id) + ',' + AD.enc(c.mes);
         celda(tr, 'ad-name', c.cliente);
@@ -1964,10 +2054,10 @@ dash.draw('heatmap', (el) => {
         celda(tr, 'ad-num', AD.descTxt(c));
         celda(tr, '', AD.chips(c.senales));
         return tr;
-      }));
+      }, {firma: '', cols: 9});
       return;
     }
-    tb.replaceChildren(...filasClientes().map((o) => {
+    AD.partes(tb, filasClientes(), (o) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(o.vendedor) + ',' + AD.enc(o.cliente_id) + ',' + AD.enc(o.mes);
       celda(tr, 'ad-name', o.cliente);
@@ -1980,7 +2070,7 @@ dash.draw('heatmap', (el) => {
       celda(tr, 'ad-num', AD.descTxt(o));
       celda(tr, '', AD.chips(o.senales));
       return tr;
-    }));
+    }, {firma: v, cols: 9});
   });
 
   // ---------- Descarga en Excel de «Clientes comerciales» ----------
@@ -2133,7 +2223,7 @@ dash.draw('heatmap', (el) => {
     document.querySelectorAll('#dl-error').forEach((e) => { e.hidden = ok; });
   }));
 
-  const lista = () => AD.clientesP().filter((c) => c.n_senales > 0).sort((a, b) => (b.kilos || 0) - (a.kilos || 0));
+  const lista = () => AD.recordar('f-revisar', [AD.clientesP()], () => AD.clientesP().filter((c) => c.n_senales > 0).sort((a, b) => (b.kilos || 0) - (a.kilos || 0) || b.kilos_p - a.kilos_p));
   const cliSel = () => {
     const ls = lista(), p = dash.params().cliente;
     return ls.find((r) => r.cliente_id === p) || ls[0] || null;
@@ -2143,13 +2233,14 @@ dash.draw('heatmap', (el) => {
   dash.draw('revisar-body', (tb) => {
     if (AD.wait(tb, CLI, true)) return;
     const q = [...document.querySelectorAll('#ad-buscar')].map((i) => i.value.trim().toLowerCase()).join('');
-    const sel = cliSel();
-    const rs = lista().filter((r) => !q || (r.cliente + ' ' + r.cliente_id + ' ' + r.ventas_directas).toLowerCase().includes(q));
-    tb.replaceChildren(...rs.map((r) => {
+    const sel = cliSel(), ls = lista();
+    const rs = AD.recordar('f-revisar-q', [ls, q], () => ls.filter((r) => !q || (r.cliente + ' ' + r.cliente_id + ' ' + r.ventas_directas).toLowerCase().includes(q)));
+    const selKey = sel ? AD.enc(sel.cliente_id) + ',' + AD.enc(sel.mes) : null;
+    AD.partes(tb, rs, (r) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(r.cliente_id) + ',' + AD.enc(r.mes);
       tr.tabIndex = 0;
-      if (sel && r.cliente_id === sel.cliente_id) tr.className = 'is-sel';
+      if (tr.dataset.key === selKey) tr.className = 'is-sel';
       celda(tr, 'ad-name', r.cliente);
       celda(tr, 'ad-num', AD.n0(r.n_vd_p));
       celda(tr, 'ad-num', AD.n0(r.kilos_p));
@@ -2157,7 +2248,7 @@ dash.draw('heatmap', (el) => {
       celda(tr, 'ad-num', AD.descTxt(r));
       celda(tr, '', AD.chips(r.senales));
       return tr;
-    }));
+    }, {sel: selKey, cols: 6});
   });
 
   const dcTxt = (name, f) => dash.draw(name, (el) => {
@@ -2194,11 +2285,15 @@ dash.draw('heatmap', (el) => {
   const DESC = [...CLI, 'descuentos', 'formatos_mes'];
   // Cilindros y kilos que compró el cliente en el período, por formato, a las ventas directas de la zona.
   const ventasFmt = () => {
-    const c = cliSel(), M = new Map();
+    const c = cliSel(), r = AD.rango();
+    return AD.recordar('f-fmt', [AD.rows('formatos_mes'), c && c.cliente_id, r.join(','), AD.zonaKey()], () => ventasFmt0(c, r));
+  };
+  const ventasFmt0 = (c, r) => {
+    const M = new Map();
     if (!c) return M;
-    const set = new Set(AD.rango());
-    AD.rows('formatos_mes').forEach((x) => {
-      if (String(x.cliente_id) !== c.cliente_id || !set.has(x.mes) || !AD.enZona(x.vendedor)) return;
+    const set = new Set(r);
+    AD.de('formatos_mes', 'cliente_id', c.cliente_id).forEach((x) => {
+      if (!set.has(x.mes) || !AD.enZona(x.vendedor)) return;
       const o = M.get(x.material) || {unidades: 0, kilos: 0};
       o.unidades += Number(x.unidades);
       o.kilos += Number(x.kilos);
@@ -2210,7 +2305,7 @@ dash.draw('heatmap', (el) => {
   const FMT = {CN02: ['2 kg', 2], CN05: ['5 kg', 5], CN11: ['11 kg', 11], CN15: ['15 kg', 15], CN45: ['45 kg', 45], CGH15: ['15 kg grúa', 115], CGH15_AL: ['15 kg grúa aluminio', 115.5]};
   const descSel = () => {
     const c = cliSel();
-    return c ? AD.rows('descuentos').filter((x) => String(x.cliente_id) === c.cliente_id).sort((a, b) => a.orden - b.orden) : [];
+    return AD.recordar('f-desc', [AD.rows('descuentos'), c && c.cliente_id], () => (c ? AD.de('descuentos', 'cliente_id', c.cliente_id).slice().sort((a, b) => a.orden - b.orden) : []));
   };
   // Último día posible del período (comparación de textos AAAA-MM-DD).
   const finPeriodo = () => (AD.mes() || '') + '-31';
@@ -2322,9 +2417,9 @@ dash.draw('heatmap', (el) => {
   // Clientes sin compras al cierre del período, con los filtros de zona y venta directa (sin la búsqueda).
   const filas = () => {
     const h = AD.mes(), n = nMeses(), v = AD.vd();
-    return AD.rows('inactividad')
-      .filter((r) => r.mes === h && r.meses_sin_compra >= n && AD.algunaEnZona(r.ventas_directas) && (!v || String(r.ventas_directas).split(' · ').includes(v)))
-      .sort((a, b) => b.prom_mes - a.prom_mes || b.kilos_12 - a.kilos_12);
+    return AD.recordar('in-filas', [AD.rows('inactividad'), h, n, v, AD.zonaKey()], () => AD.de('inactividad', 'mes', h)
+      .filter((r) => r.meses_sin_compra >= n && AD.algunaEnZona(r.ventas_directas) && (!v || String(r.ventas_directas).split(' · ').includes(v)))
+      .sort((a, b) => b.prom_mes - a.prom_mes || b.kilos_12 - a.kilos_12));
   };
   const celda = (tr, cls, contenido) => {
     const td = document.createElement('td');
@@ -2353,9 +2448,10 @@ dash.draw('heatmap', (el) => {
     if (AD.wait(tb, INS, true)) { vacio.forEach((e) => { e.hidden = true; }); return; }
     const n = nMeses();
     const q = [...document.querySelectorAll('#ad-buscar-inact')].map((i) => i.value.trim().toLowerCase()).join('');
-    const rs = filas().filter((r) => !q || (r.cliente + ' ' + r.cliente_id + ' ' + r.ventas_directas).toLowerCase().includes(q));
+    const todas = filas();
+    const rs = AD.recordar('in-q', [todas, q], () => todas.filter((r) => !q || (r.cliente + ' ' + r.cliente_id + ' ' + r.ventas_directas).toLowerCase().includes(q)));
     vacio.forEach((e) => { e.hidden = rs.length > 0; });
-    tb.replaceChildren(...rs.map((r) => {
+    AD.partes(tb, rs, (r) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(r.cliente_id) + ',' + AD.enc(r.mes);
       if (r.meses_sin_compra === n) tr.className = 'is-nuevo';
@@ -2370,7 +2466,7 @@ dash.draw('heatmap', (el) => {
       celda(tr, 'ad-num ad-sec', AD.n0(r.meses_con_compra_12) + ' de ' + AD.n0(r.meses_ventana));
       celda(tr, 'ad-num', AD.descTxt(r));
       return tr;
-    }));
+    }, {firma: n, cols: 9});
   });
   document.querySelectorAll('#ad-buscar-inact').forEach((i) => i.addEventListener('input', () => dash.draw('inact-body')));
 
@@ -2393,7 +2489,7 @@ dash.draw('heatmap', (el) => {
   });
   dash.draw('in-inicio', (el) => {
     if (AD.wait(el, ['clientes_mes'])) return;
-    const m = AD.rows('clientes_mes').map((r) => r.mes).sort()[0];
+    const m = AD.recordar('in-inicio', [AD.rows('clientes_mes')], () => AD.rows('clientes_mes').reduce((a, r) => (a == null || r.mes < a ? r.mes : a), null));
     el.dataset.where = AD.where({mes: m});
     el.textContent = AD.mesLargo(m);
   });
@@ -2451,7 +2547,7 @@ dash.draw('heatmap', (el) => {
   const mesTxt = (m) => (m ? AD.MC[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(0, 4) : '—');
   const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
   const celda = (tr, cls, txt) => { const td = mk('td', cls, txt); tr.appendChild(td); return td; };
-  const meses = () => [...new Set(AD.rows('clientes_mes').map((r) => r.mes))].sort();
+  const meses = () => AD.recordar('m-meses', [AD.rows('clientes_mes')], () => [...new Set(AD.rows('clientes_mes').map((r) => r.mes))].sort());
   // Clientes de la región y comuna elegidas: les vendió una venta directa de la zona o, sin compras por venta directa, son de esa región (y comuna de facturación).
   const enZona = (r) => {
     const z = AD.zona();
@@ -2459,9 +2555,9 @@ dash.draw('heatmap', (el) => {
     if (r.ventas_directas) return AD.algunaEnZona(r.ventas_directas);
     return r.region === z.region && (!z.comuna || r.comuna === z.comuna);
   };
-  const base = () => AD.rows('maestro_clientes').filter(enZona);
+  const base = () => AD.recordar('m-base', [AD.rows('maestro_clientes'), AD.zonaKey()], () => AD.rows('maestro_clientes').filter(enZona));
 
-  const lista = () => {
+  const lista = () => AD.recordar('m-lista', [base(), st.q, st.ver, st.k, st.dir], () => {
     const q = st.q.trim().toLowerCase();
     const rs = base().filter((r) => {
       if (st.ver === 'con' && !r.ultima_compra) return false;
@@ -2472,16 +2568,13 @@ dash.draw('heatmap', (el) => {
     const k = st.k, d = st.dir;
     return rs.sort((a, b) => {
       const x = a[k], y = b[k];
-      if (x == null || x === '') return y == null || y === '' ? a.cliente.localeCompare(b.cliente, 'es') : 1;
+      if (x == null || x === '') return y == null || y === '' ? AD.ES.compare(a.cliente, b.cliente) : 1;
       if (y == null || y === '') return -1;
-      const c = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'es', {numeric: true});
-      return (c || a.cliente.localeCompare(b.cliente, 'es')) * (c ? d : 1);
+      const c = typeof x === 'number' ? x - y : AD.ESN.compare(String(x), String(y));
+      return (c || AD.ES.compare(a.cliente, b.cliente)) * (c ? d : 1);
     });
-  };
-  const sel = () => {
-    const rs = base();
-    return rs.find((r) => r.cliente_id === st.sel) || lista()[0] || null;
-  };
+  });
+  const sel = () => AD.recordar('m-sel', [base(), lista(), st.sel], () => base().find((r) => r.cliente_id === st.sel) || lista()[0] || null);
   const DET = ['mc-nombre', 'mc-codigo', 'mc-estado', 'mc-desc', 'mc-desc-pct', 'mc-desc-n', 'mc-desc-hasta', 'mc-ultima', 'mc-k12', 'mc-ktot', 'mc-vd-body', 'mc-inicio', 'mc-fin', 'mc-periodo'];
   const redibujar = (todo) => { if (todo) dash.draw('maestro-body'); DET.forEach((n) => dash.draw(n)); };
 
@@ -2507,11 +2600,12 @@ dash.draw('heatmap', (el) => {
       const b = th.querySelector('.ad-sort');
       if (b && b.dataset.k === st.k) th.setAttribute('aria-sort', st.dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
     });
-    tb.replaceChildren(...lista().map((r) => {
+    const selKey = c ? AD.enc(c.cliente_id) : null;
+    AD.partes(tb, lista(), (r) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(r.cliente_id);
       tr.tabIndex = 0;
-      if (c && r.cliente_id === c.cliente_id) tr.className = 'is-sel';
+      if (tr.dataset.key === selKey) tr.className = 'is-sel';
       celda(tr, 'ad-name', r.cliente);
       celda(tr, 'ad-sec', r.cliente_id);
       celda(tr, 'ad-num', AD.descTxt(r));
@@ -2519,7 +2613,7 @@ dash.draw('heatmap', (el) => {
       celda(tr, r.ultima_compra ? 'ad-nw' : 'ad-nw ad-muted', r.ultima_compra ? mesTxt(r.ultima_compra) : 'Sin compras');
       celda(tr, 'ad-num', r.ultima_compra ? AD.n0(r.kilos_12) : '—');
       return tr;
-    }));
+    }, {sel: selKey, cols: 6});
   });
 
   const txt = (name, f) => dash.draw(name, (el) => {
@@ -2544,7 +2638,7 @@ dash.draw('heatmap', (el) => {
     const c = sel();
     if (!c) { box.replaceChildren(); return; }
     box.dataset.where = AD.where({cliente_id: c.cliente_id});
-    const ds = AD.rows('descuentos').filter((x) => String(x.cliente_id) === c.cliente_id && Number(x.descuento) > 0).sort((a, b) => a.orden - b.orden);
+    const ds = AD.de('descuentos', 'cliente_id', c.cliente_id).filter((x) => Number(x.descuento) > 0).sort((a, b) => a.orden - b.orden);
     const dist = new Set(ds.map((x) => x.valido_desde)).size > 1;
     box.replaceChildren(...ds.map((x) => {
       const t = mk('div', 'ad-fmt');
@@ -2557,7 +2651,7 @@ dash.draw('heatmap', (el) => {
   dash.draw('mc-vd-body', (tb) => {
     if (AD.wait(tb, ['maestro_vd', ...NEC], true)) return;
     const c = sel();
-    const rs = c ? AD.rows('maestro_vd').filter((r) => r.cliente_id === c.cliente_id).sort((a, b) => b.kilos_12 - a.kilos_12 || b.kilos_total - a.kilos_total) : [];
+    const rs = c ? AD.de('maestro_vd', 'cliente_id', c.cliente_id).slice().sort((a, b) => b.kilos_12 - a.kilos_12 || b.kilos_total - a.kilos_total) : [];
     tb.replaceChildren(...rs.map((r) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(r.cliente_id) + ',' + AD.enc(r.vendedor);
@@ -2572,7 +2666,7 @@ dash.draw('heatmap', (el) => {
   // Resumen
   const stat = (name, f) => dash.draw(name, (el) => {
     if (AD.wait(el, NEC)) return;
-    el.textContent = AD.n0(base().filter(f).length);
+    el.textContent = AD.n0(AD.recordar('m-stat|' + name, [base()], () => base().filter(f).length));
   });
   stat('mc-total', () => true);
   stat('mc-con-desc', (r) => r.descuento > 0);
