@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alertas de descuento comercial por región · Gasco</title>
+<title>Alertas descuentos división · Gasco</title>
 <style>
 :root{color-scheme:light dark;
 --font-anthropic-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -86,7 +86,14 @@ html,body{margin:0;background:var(--color-bg)}
 .ad .ad-table th{position:sticky;top:0;z-index:1;background:var(--color-panel);text-align:left;font-weight:var(--cds-font-weight-medium);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);padding:var(--cds-pad-sm);border-bottom:1px solid var(--color-border-line);white-space:nowrap;vertical-align:bottom}
 .ad .ad-table td{padding:var(--cds-pad-sm);border-bottom:1px solid var(--color-border-line);vertical-align:middle}
 .ad .ad-table .ad-num{text-align:right;white-space:nowrap}
-.ad .ad-pick tbody tr,.ad .ad-pick-cli tbody tr{cursor:pointer}
+.ad .ad-pick tbody tr,.ad .ad-pick-cli tbody tr,.ad .ad-pick-fcli tbody tr{cursor:pointer}
+.ad .ad-fdet{margin-top:var(--cds-gap-md)}
+.ad .ad-fdet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--cds-gap-md)}
+.ad .ad-fdet-tit{display:grid;gap:2px;min-width:0}
+.ad .ad-fdet-x{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg-muted);font:inherit;font-size:18px;line-height:1;cursor:pointer}
+.ad .ad-fdet-x:hover{color:var(--color-fg)}
+.ad .ad-fdet-x:focus-visible{outline:2px solid var(--color-fg);outline-offset:1px}
+.ad .ad-fdet .ad-stats{margin:var(--cds-gap-xs) 0}
 .ad .ad-table td:first-child,.ad .ad-table th:first-child{position:sticky;left:0;background:var(--color-panel)}
 .ad .ad-table th:first-child{z-index:2}
 .ad .ad-table tbody tr:hover td{background:color-mix(in srgb,var(--color-fg) 4%,var(--color-panel))}
@@ -336,8 +343,8 @@ html,body{margin:0;background:var(--color-bg)}
           <th data-field="pct" class="ad-num">Venta a clientes comerciales</th>
           <th data-field="dif_pp" class="ad-num ad-sec">vs año anterior</th>
           <th data-field="meses_alerta_12">Meses sobre el límite (12)</th>
-          <th data-field="exceso" class="ad-num ad-sec">Kg sobre el límite</th>
-          <th data-field="con_senal" class="ad-num">Clientes con señales</th>
+          <th class="ad-sec">Región</th>
+          <th class="ad-num" title="Clientes comerciales distintos que le compraron en el período elegido">Clientes comerciales</th>
         </tr></thead>
         <tbody data-draw="tablero-body"></tbody>
       </table>
@@ -405,7 +412,7 @@ html,body{margin:0;background:var(--color-bg)}
       </div>
     </div>
     <div class="ad-scroll">
-      <table class="ad-table" data-source="clientes" data-row-key="vendedor,cliente_id,mes" aria-label="Clientes comerciales de la venta directa en el período">
+      <table class="ad-table ad-pick-fcli" data-source="clientes" data-row-key="vendedor,cliente_id,mes" aria-label="Clientes comerciales de la venta directa en el período">
         <thead><tr>
           <th data-field="cliente">Cliente</th>
           <th data-field="cliente_id" class="ad-sec">Código</th>
@@ -421,13 +428,32 @@ html,body{margin:0;background:var(--color-bg)}
       </table>
     </div>
     <p class="ad-note" id="f-sin-cli" hidden>Esta venta directa no tiene compras de clientes comerciales en el período elegido.</p>
+    <p class="ad-note" id="fd-ayuda">Toca un cliente de la tabla para ver su descuento, los formatos que compró, sus kilos y cilindros.</p>
+    <div class="ad-det ad-fdet" id="ficha-detalle" hidden aria-live="polite">
+      <div class="ad-fdet-head">
+        <div class="ad-fdet-tit">
+          <p class="ad-eyebrow">Cliente seleccionado</p>
+          <p class="ad-det-h" data-draw="fd-nombre" data-source="clientes_total" data-field="cliente">—</p>
+          <p class="ad-card-note">Código <span data-draw="fd-codigo" data-source="clientes_total" data-field="cliente_id">—</span> · <span data-draw="fd-tipo" data-source="clientes_perfil" data-field="tipo">—</span> · compras de <b data-draw="fd-quien" data-source="clientes" data-field="vendedor">—</b> en <span data-draw="t-mes" data-source="canal" data-field="mes_nombre">—</span></p>
+        </div>
+        <button type="button" class="ad-fdet-x" id="fd-cerrar" aria-label="Cerrar el detalle del cliente">×</button>
+      </div>
+      <div class="ad-stats">
+        <div class="ad-stat"><span>Kg del período</span><strong data-draw="fd-kg" data-source="formatos_mes" data-field="kilos">—</strong></div>
+        <div class="ad-stat"><span>Cilindros del período</span><strong data-draw="fd-cil" data-source="formatos_mes" data-field="unidades">—</strong></div>
+        <div class="ad-stat"><span>Descuento</span><strong data-draw="fd-dcto" data-source="descuentos" data-field="descuento">—</strong></div>
+        <div class="ad-stat"><span>Formatos con descuento</span><strong data-draw="fd-nfmt" data-source="descuentos" data-field="material">—</strong></div>
+      </div>
+      <div class="ad-fmts" data-draw="fd-fmts" data-source="descuentos formatos_mes"></div>
+      <p class="ad-note">Cada tarjeta muestra el descuento comercial ZDPE del formato y, debajo, los cilindros y kilos de lo que el cliente compró en el período, según el detalle de sus pedidos en la Base JP. Los formatos que compró sin descuento aparecen como «Sin dcto.».</p>
+    </div>
   </section>
 
   <section class="ad-card" id="revisar">
     <div class="ad-card-head">
       <div>
         <h2>Clientes comerciales a revisar</h2>
-        <p class="ad-card-note">Clientes que compraron en <span data-draw="t-mes" data-source="canal" data-field="mes_nombre">—</span> y tienen al menos una señal en los 12 meses de <span data-draw="cli-periodo" data-source="clientes" data-field="periodo">—</span>, de todas las ventas directas de la región y comuna elegidas, ordenados de mayor a menor kilos en 12 meses. Esta lista no usa el filtro de venta directa. Toca un cliente para ver qué ventas directas le venden y cuántos kilos.</p>
+        <p class="ad-card-note">Clientes que compraron en <span data-draw="t-mes" data-source="canal" data-field="mes_nombre">—</span> y tienen al menos una señal en los 12 meses de <span data-draw="cli-periodo" data-source="clientes" data-field="periodo">—</span>, de todas las ventas directas de la región y comuna elegidas, ordenados de mayor a menor kilos en 12 meses. Con una venta directa en el filtro general, muestra solo los clientes que le compraron a ella. Toca un cliente para ver qué ventas directas le venden y cuántos kilos.</p>
       </div>
       <input type="search" id="ad-buscar" placeholder="Buscar cliente, código o venta directa" aria-label="Buscar cliente, código o venta directa">
     </div>
@@ -634,7 +660,7 @@ html,body{margin:0;background:var(--color-bg)}
   });
   const calcs = {}, draws = {}, onDatas = [];
   let cache = {}, listo = false, pendiente = false;
-  const CLAVE = 'alertas-descuento-region-filtros';
+  const CLAVE = "alertas-descuentos-division-filtros";
   let params = {};
   try { params = JSON.parse(localStorage.getItem(CLAVE)) || {}; } catch (e) { params = {}; }
   const usaFiltros = (id) => String(calcs[id].fn).includes('dash.params');
@@ -1759,11 +1785,14 @@ dash.calc('maestro_vd', {
 // ---------- Tablero de riesgo ----------
 (() => {
   dash.draw('tablero-body', (tb) => {
-    if (AD.wait(tb, ['tablero', 'cuota', 'reglas', 'canal'], true)) return;
+    if (AD.wait(tb, ['tablero', 'cuota', 'reglas', 'canal', 'clientes', 'vd_zona'], true)) return;
     const r = AD.rango(), h = AD.mes(), sel = AD.vd(), lim = AD.regla('limite'), vig = AD.regla('vigilancia');
     const ms = AD.meses(), i = ms.indexOf(h), win = ms.slice(Math.max(0, i - 11), i + 1);
     const hist = new Map(AD.rows('cuota').map((x) => [x.vendedor + '|' + x.mes, x]));
-    const sen = new Map(AD.rows('tablero').filter((x) => x.mes === h).map((x) => [x.vendedor, x.con_senal]));
+    // Región de cada venta directa y clientes comerciales distintos que le compraron en el período.
+    const zona = new Map(AD.rows('vd_zona').map((z) => [z.vendedor, z]));
+    const ncli = new Map();
+    AD.pares(r).forEach((p) => ncli.set(p.vendedor, (ncli.get(p.vendedor) || 0) + 1));
     const rs = [...AD.evalVD(r).values()].filter((o) => o.total > 0 && AD.enFiltro(o.vendedor)).sort((a, b) => b.pct - a.pct);
     const tone = (p) => (p > lim ? 'ad-over' : p > vig ? 'ad-vig' : '');
     tb.replaceChildren(...rs.map((o) => {
@@ -1808,8 +1837,10 @@ dash.calc('maestro_vd', {
         dots.appendChild(d);
       });
       mc.append(dots, document.createTextNode(AD.n0(o.meses_alerta_12)));
-      td('ad-num ad-sec').textContent = AD.n0(o.exceso);
-      td('ad-num').textContent = AD.n0(sen.get(o.vendedor) || 0);
+      const z = zona.get(o.vendedor), rc = td('ad-sec ad-nw');
+      rc.textContent = z ? z.region_nombre : '—';
+      if (z && z.comuna) rc.title = z.comuna;
+      td('ad-num').textContent = AD.n0(ncli.get(o.vendedor) || 0);
       return tr;
     }));
   });
@@ -2036,14 +2067,25 @@ dash.draw('heatmap', (el) => {
     return AD.pares().filter((o) => o.vendedor === v).sort((a, b) => b.kilos_p - a.kilos_p).map((o) => ({...o, share: o.share_p, ventas_directas: o.vendedor}));
   };
 
+  // ---------- Cliente elegido en «Clientes comerciales» ----------
+  let fsel = null;
+  const fKey = (r) => (r.vendedor && AD.vd() ? AD.enc(r.vendedor) + ',' : '') + AD.enc(r.cliente_id) + ',' + AD.enc(r.mes);
+  // La fila elegida, si sigue en la tabla con los filtros actuales.
+  const fFila = () => (fsel ? filasClientes().find((r) => r.cliente_id === fsel) || null : null);
+
   dash.draw('ficha-clientes', (tb) => {
     if (AD.wait(tb, ['clientes', 'clientes_total', 'vd_zona', ...BASE], true)) return;
     const v = AD.vd();
+    const fr = fFila(), selKey = fr ? fKey(fr) : null;
+    document.querySelectorAll('#ficha-detalle').forEach((e) => { e.hidden = !fr; });
+    document.querySelectorAll('#fd-ayuda').forEach((e) => { e.hidden = !!fr; });
     if (!v) {
       const cs = filasClientes();
       AD.partes(tb, cs, (c) => {
         const tr = document.createElement('tr');
         tr.dataset.key = AD.enc(c.cliente_id) + ',' + AD.enc(c.mes);
+        tr.tabIndex = 0;
+        if (tr.dataset.key === selKey) tr.className = 'is-sel';
         celda(tr, 'ad-name', c.cliente);
         celda(tr, 'ad-sec', c.cliente_id);
         celda(tr, 'ad-sec', c.tipo);
@@ -2054,12 +2096,14 @@ dash.draw('heatmap', (el) => {
         celda(tr, 'ad-num', AD.descTxt(c));
         celda(tr, '', AD.chips(c.senales));
         return tr;
-      }, {firma: '', cols: 9});
+      }, {firma: '', cols: 9, sel: selKey});
       return;
     }
     AD.partes(tb, filasClientes(), (o) => {
       const tr = document.createElement('tr');
       tr.dataset.key = AD.enc(o.vendedor) + ',' + AD.enc(o.cliente_id) + ',' + AD.enc(o.mes);
+      tr.tabIndex = 0;
+      if (tr.dataset.key === selKey) tr.className = 'is-sel';
       celda(tr, 'ad-name', o.cliente);
       celda(tr, 'ad-sec', o.cliente_id);
       celda(tr, 'ad-sec', o.tipo);
@@ -2070,7 +2114,7 @@ dash.draw('heatmap', (el) => {
       celda(tr, 'ad-num', AD.descTxt(o));
       celda(tr, '', AD.chips(o.senales));
       return tr;
-    }, {firma: v, cols: 9});
+    }, {firma: v, cols: 9, sel: selKey});
   });
 
   // ---------- Descarga en Excel de «Clientes comerciales» ----------
@@ -2223,7 +2267,13 @@ dash.draw('heatmap', (el) => {
     document.querySelectorAll('#dl-error').forEach((e) => { e.hidden = ok; });
   }));
 
-  const lista = () => AD.recordar('f-revisar', [AD.clientesP()], () => AD.clientesP().filter((c) => c.n_senales > 0).sort((a, b) => (b.kilos || 0) - (a.kilos || 0) || b.kilos_p - a.kilos_p));
+  // Con una venta directa en el filtro general, solo los clientes que le compraron a ella en el período.
+  const lista = () => {
+    const v = AD.vd();
+    return AD.recordar('f-revisar', [AD.clientesP(), v], () => AD.clientesP()
+      .filter((c) => c.n_senales > 0 && (!v || c.vds.includes(v)))
+      .sort((a, b) => (b.kilos || 0) - (a.kilos || 0) || b.kilos_p - a.kilos_p));
+  };
   const cliSel = () => {
     const ls = lista(), p = dash.params().cliente;
     return ls.find((r) => r.cliente_id === p) || ls[0] || null;
@@ -2324,12 +2374,9 @@ dash.draw('heatmap', (el) => {
     document.querySelectorAll('#dc-vig-dist, #dc-desc-dist').forEach((e) => { e.hidden = !dist; });
   };
   dash.onData(descEstado);
-  dash.draw('dc-desc', (box) => {
-    descEstado();
-    if (AD.wait(box, DESC, true)) return;
-    const c = cliSel(), fin = finPeriodo(), ds = descSel(), dist = distintas(ds), vs = ventasFmt();
-    if (c) box.dataset.where = AD.where({cliente_id: c.cliente_id});
-    // Tarjetas: los formatos con descuento y, al final de su grupo, los que compró sin descuento.
+  // Tarjetas: los formatos con descuento y, al final de su grupo, los que compró sin descuento.
+  const tarjetas = (box, ds, vs) => {
+    const fin = finPeriodo(), dist = distintas(ds);
     const cards = ds.map((x) => ({...x, sin: false}));
     vs.forEach((v, mat) => {
       if (!ds.some((x) => x.material === mat)) cards.push({material: mat, formato: (FMT[mat] || [mat])[0], orden: (FMT[mat] || [mat, 999])[1], sin: true});
@@ -2365,7 +2412,84 @@ dash.draw('heatmap', (el) => {
       }
       return t;
     }));
+  };
+
+  dash.draw('dc-desc', (box) => {
+    descEstado();
+    if (AD.wait(box, DESC, true)) return;
+    const c = cliSel();
+    if (c) box.dataset.where = AD.where({cliente_id: c.cliente_id});
+    tarjetas(box, descSel(), ventasFmt());
   });
+
+  // ---------- Detalle del cliente elegido en «Clientes comerciales» ----------
+  const FD = ['clientes', 'clientes_total', 'clientes_perfil', 'vd_zona', 'descuentos', 'formatos_mes', ...BASE];
+  // Cilindros y kilos por formato en el período: de la venta directa elegida o de todas las de la zona.
+  const fdVentas = () => {
+    const r = AD.rango(), v = AD.vd();
+    return AD.recordar('fd-fmt', [AD.rows('formatos_mes'), fsel, r.join(','), v, AD.zonaKey()], () => {
+      const M = new Map(), set = new Set(r);
+      if (!fsel) return M;
+      AD.de('formatos_mes', 'cliente_id', fsel).forEach((x) => {
+        if (!set.has(x.mes) || (v ? x.vendedor !== v : !AD.enZona(x.vendedor))) return;
+        const o = M.get(x.material) || {unidades: 0, kilos: 0};
+        o.unidades += Number(x.unidades);
+        o.kilos += Number(x.kilos);
+        M.set(x.material, o);
+      });
+      return M;
+    });
+  };
+  const fdDesc = () => AD.recordar('fd-desc', [AD.rows('descuentos'), fsel], () => (fsel ? AD.de('descuentos', 'cliente_id', fsel).slice().sort((a, b) => a.orden - b.orden) : []));
+  const fdTxt = (name, f) => dash.draw(name, (el) => {
+    if (AD.wait(el, FD)) return;
+    const r = fFila();
+    if (!r) { el.textContent = '—'; return; }
+    el.dataset.where = AD.where({cliente_id: r.cliente_id});
+    el.textContent = f(r);
+  });
+  fdTxt('fd-nombre', (r) => r.cliente);
+  fdTxt('fd-codigo', (r) => r.cliente_id);
+  fdTxt('fd-tipo', (r) => r.tipo || '—');
+  fdTxt('fd-quien', () => AD.vd() || 'todas las ventas directas de la zona elegida');
+  const suma = (k) => [...fdVentas().values()].reduce((a, o) => a + o[k], 0);
+  fdTxt('fd-kg', () => AD.n0(suma('kilos')));
+  fdTxt('fd-cil', () => AD.n0(suma('unidades')));
+  fdTxt('fd-dcto', () => {
+    const ds = fdDesc();
+    return ds.length ? AD.descTxt({descuento: Math.max(...ds.map((x) => x.descuento)), descuento_min: Math.min(...ds.map((x) => x.descuento))}) : 'Sin descuento';
+  });
+  fdTxt('fd-nfmt', () => AD.n0(fdDesc().length));
+  dash.draw('fd-fmts', (box) => {
+    if (AD.wait(box, FD, true)) return;
+    const r = fFila();
+    if (!r) { box.replaceChildren(); return; }
+    box.dataset.where = AD.where({cliente_id: r.cliente_id});
+    tarjetas(box, fdDesc(), fdVentas());
+  });
+  const FD_DIBUJOS = ['ficha-clientes', 'fd-nombre', 'fd-codigo', 'fd-tipo', 'fd-quien', 'fd-kg', 'fd-cil', 'fd-dcto', 'fd-nfmt', 'fd-fmts', 't-mes'];
+  const fdElegir = (e) => {
+    // Tocar una señal abre su detalle, sin elegir el cliente.
+    if (e.target.closest('.ad-chip')) return;
+    const tr = e.target.closest('tbody tr[data-key]');
+    if (!tr) return;
+    const k = tr.dataset.key.split(',').map(decodeURIComponent), id = k.length === 3 ? k[1] : k[0];
+    fsel = fsel === id ? null : id;
+    FD_DIBUJOS.forEach((n) => dash.draw(n));
+    if (!fsel) return;
+    document.querySelectorAll('#ficha-detalle').forEach((d) => {
+      const b = d.getBoundingClientRect();
+      if (b.top > window.innerHeight - 120) d.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    });
+  };
+  document.querySelectorAll('.ad-pick-fcli').forEach((t) => {
+    t.addEventListener('click', fdElegir);
+    t.addEventListener('keydown', (e) => { if (e.key === 'Enter') fdElegir(e); });
+  });
+  document.querySelectorAll('#fd-cerrar').forEach((b) => b.addEventListener('click', () => {
+    fsel = null;
+    FD_DIBUJOS.forEach((n) => dash.draw(n));
+  }));
   const descTxt = (name, f) => dash.draw(name, (el) => {
     if (AD.wait(el, DESC)) return;
     const c = cliSel(), ds = descSel();
